@@ -3,6 +3,7 @@ import { body, param, validationResult } from 'express-validator';
 import User from '../models/userModel.js';
 import bcrypt from 'bcrypt';
 import { getPagination, paginatedResponse } from '../utils/paginate.js';
+import { catchAsync } from '../utils/asyncHandler.js';
 
 const router = express.Router();
 
@@ -42,29 +43,21 @@ router.post(
 );
 
 // Get all users (password excluded)
-router.get('/users', async (req, res) => {
-  try {
-    const { skip, limit, page } = getPagination(req.query);
-    const [users, total] = await Promise.all([
-      User.find().select('-password').sort({ createdAt: -1 }).skip(skip).limit(limit),
-      User.countDocuments(),
-    ]);
-    res.status(200).json(paginatedResponse(users, total, page, limit));
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching users' });
-  }
-});
+router.get('/users', catchAsync(async (req, res) => {
+  const { skip, limit, page } = getPagination(req.query);
+  const [users, total] = await Promise.all([
+    User.find().select('-password').sort({ createdAt: -1 }).skip(skip).limit(limit),
+    User.countDocuments(),
+  ]);
+  res.status(200).json(paginatedResponse(users, total, page, limit));
+}));
 
 // Delete user by ID
-router.delete('/users/delete-user/:id', [param('id').isMongoId()], handleValidation, async (req, res) => {
-  try {
-    const deletedUser = await User.findByIdAndDelete(req.params.id);
-    if (!deletedUser) return res.status(404).json({ message: 'User not found' });
-    res.status(200).json({ message: 'User deleted successfully' });
-  } catch {
-    res.status(500).json({ message: 'Failed to delete user' });
-  }
-});
+router.delete('/users/delete-user/:id', [param('id').isMongoId()], handleValidation, catchAsync(async (req, res) => {
+  const deletedUser = await User.findByIdAndDelete(req.params.id);
+  if (!deletedUser) return res.status(404).json({ message: 'User not found' });
+  res.status(200).json({ message: 'User deleted successfully' });
+}));
 
 // Edit user by ID
 router.put(
@@ -76,20 +69,16 @@ router.put(
     body('role').optional().isIn(['user', 'admin']),
   ],
   handleValidation,
-  async (req, res) => {
+  catchAsync(async (req, res) => {
     const { name, email, role } = req.body;
-    try {
-      const updatedUser = await User.findByIdAndUpdate(
-        req.params.id,
-        { ...(name && { name }), ...(email && { email }), ...(role && { role }) },
-        { new: true }
-      ).select('-password');
-      if (!updatedUser) return res.status(404).json({ message: 'User not found' });
-      res.status(200).json({ message: 'User updated successfully', user: updatedUser });
-    } catch {
-      res.status(500).json({ message: 'Failed to update user' });
-    }
-  }
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { ...(name && { name }), ...(email && { email }), ...(role && { role }) },
+      { new: true }
+    ).select('-password');
+    if (!updatedUser) return res.status(404).json({ message: 'User not found' });
+    res.status(200).json({ message: 'User updated successfully', user: updatedUser });
+  })
 );
 
 // Change password (authenticated user)
@@ -100,19 +89,15 @@ router.put(
     body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters'),
   ],
   handleValidation,
-  async (req, res) => {
-    try {
-      const user = await User.findById(req.user.id);
-      if (!user) return res.status(404).json({ message: 'User not found' });
-      const isMatch = await bcrypt.compare(req.body.currentPassword, user.password);
-      if (!isMatch) return res.status(400).json({ message: 'Current password is incorrect' });
-      user.password = req.body.newPassword;
-      await user.save();
-      res.json({ message: 'Password changed successfully' });
-    } catch {
-      res.status(500).json({ message: 'Failed to change password' });
-    }
-  }
+  catchAsync(async (req, res) => {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    const isMatch = await bcrypt.compare(req.body.currentPassword, user.password);
+    if (!isMatch) return res.status(400).json({ message: 'Current password is incorrect' });
+    user.password = req.body.newPassword;
+    await user.save();
+    res.json({ message: 'Password changed successfully' });
+  })
 );
 
 export default router;

@@ -5,58 +5,43 @@ import fs from 'fs';
 import Module from '../models/moduleModel.js';
 import { requireAdmin } from '../controllers/authController.js';
 import { cacheMiddleware, delPattern } from '../utils/cache.js';
+import { catchAsync } from '../utils/asyncHandler.js';
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
 
 // GET all modules (optionally filter by year) — cached 5 min
-router.get('/modules', cacheMiddleware(), async (req, res) => {
-  try {
-    const filter = req.query.year ? { year: Number(req.query.year) } : {};
-    const modules = await Module.find(filter).sort({ year: 1, name: 1 });
-    res.json(modules);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.get('/modules', cacheMiddleware(), catchAsync(async (req, res) => {
+  const filter = req.query.year ? { year: Number(req.query.year) } : {};
+  const modules = await Module.find(filter).sort({ year: 1, name: 1 });
+  res.json(modules);
+}));
 
 // POST create module
-router.post('/modules', requireAdmin, async (req, res) => {
-  try {
-    const { name, year, courses } = req.body;
-    if (!name || !year) return res.status(400).json({ message: 'name and year are required' });
-    const module = await Module.create({ name, year, courses: courses || [] });
-    delPattern('GET:/api/modules');
-    res.status(201).json(module);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.post('/modules', requireAdmin, catchAsync(async (req, res) => {
+  const { name, year, courses } = req.body;
+  if (!name || !year) return res.status(400).json({ message: 'name and year are required' });
+  const module = await Module.create({ name, year, courses: courses || [] });
+  delPattern('GET:/api/modules');
+  res.status(201).json(module);
+}));
 
 // PUT update module
-router.put('/modules/:id', requireAdmin, async (req, res) => {
-  try {
-    const { name, year, courses } = req.body;
-    const updated = await Module.findByIdAndUpdate(req.params.id, { name, year, courses: courses || [] }, { new: true });
-    if (!updated) return res.status(404).json({ message: 'Module not found' });
-    delPattern('GET:/api/modules');
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.put('/modules/:id', requireAdmin, catchAsync(async (req, res) => {
+  const { name, year, courses } = req.body;
+  const updated = await Module.findByIdAndUpdate(req.params.id, { name, year, courses: courses || [] }, { new: true });
+  if (!updated) return res.status(404).json({ message: 'Module not found' });
+  delPattern('GET:/api/modules');
+  res.json(updated);
+}));
 
 // DELETE module
-router.delete('/modules/:id', requireAdmin, async (req, res) => {
-  try {
-    const deleted = await Module.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ message: 'Module not found' });
-    delPattern('GET:/api/modules');
-    res.json({ message: 'Module deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.delete('/modules/:id', requireAdmin, catchAsync(async (req, res) => {
+  const deleted = await Module.findByIdAndDelete(req.params.id);
+  if (!deleted) return res.status(404).json({ message: 'Module not found' });
+  delPattern('GET:/api/modules');
+  res.json({ message: 'Module deleted successfully' });
+}));
 
 // POST /api/import-modules-csv
 router.post('/import-modules-csv', requireAdmin, upload.single('file'), async (req, res) => {

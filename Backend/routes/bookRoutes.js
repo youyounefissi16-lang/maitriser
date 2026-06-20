@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import Book from '../models/bookModel.js';
 import { requireAdmin } from '../controllers/authController.js';
 import { cacheMiddleware, delPattern } from '../utils/cache.js';
+import { catchAsync } from '../utils/asyncHandler.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -59,17 +60,13 @@ router.post('/books/upload', requireAdmin, upload.single('file'), async (req, re
 });
 
 // List books — filter by moduleId, year, or keyword search (cached 5 min)
-router.get('/books', cacheMiddleware(), async (req, res) => {
-  try {
-    const filter = {};
-    if (req.query.moduleId) filter.moduleIds = req.query.moduleId;
-    if (req.query.search)   filter.title = { $regex: req.query.search, $options: 'i' };
-    const books = await Book.find(filter).populate('moduleIds').sort({ createdAt: -1 });
-    res.json(books);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.get('/books', cacheMiddleware(), catchAsync(async (req, res) => {
+  const filter = {};
+  if (req.query.moduleId) filter.moduleIds = req.query.moduleId;
+  if (req.query.search)   filter.title = { $regex: req.query.search, $options: 'i' };
+  const books = await Book.find(filter).populate('moduleIds').sort({ createdAt: -1 });
+  res.json(books);
+}));
 
 const serveSafe = (filename) => {
   const resolved = path.resolve(UPLOAD_DIR, filename);
@@ -78,47 +75,35 @@ const serveSafe = (filename) => {
 };
 
 // Download book PDF
-router.get('/books/download/:id', async (req, res) => {
-  try {
-    const book = await Book.findById(req.params.id);
-    if (!book) return res.status(404).json({ message: 'Book not found' });
-    const filePath = serveSafe(book.filename);
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk' });
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${book.originalName}"`);
-    fs.createReadStream(filePath).pipe(res);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.get('/books/download/:id', catchAsync(async (req, res) => {
+  const book = await Book.findById(req.params.id);
+  if (!book) return res.status(404).json({ message: 'Book not found' });
+  const filePath = serveSafe(book.filename);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk' });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${book.originalName}"`);
+  fs.createReadStream(filePath).pipe(res);
+}));
 
 // Serve PDF file
-router.get('/books/file/:id', async (req, res) => {
-  try {
-    const book = await Book.findById(req.params.id);
-    if (!book) return res.status(404).json({ message: 'Book not found' });
-    const filePath = serveSafe(book.filename);
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk' });
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${book.originalName}"`);
-    fs.createReadStream(filePath).pipe(res);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.get('/books/file/:id', catchAsync(async (req, res) => {
+  const book = await Book.findById(req.params.id);
+  if (!book) return res.status(404).json({ message: 'Book not found' });
+  const filePath = serveSafe(book.filename);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk' });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${book.originalName}"`);
+  fs.createReadStream(filePath).pipe(res);
+}));
 
 // Delete book
-router.delete('/books/:id', requireAdmin, async (req, res) => {
-  try {
-    const book = await Book.findByIdAndDelete(req.params.id);
-    if (!book) return res.status(404).json({ message: 'Book not found' });
-    const filePath = path.join(UPLOAD_DIR, book.filename);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    delPattern('GET:/api/books');
-    res.json({ message: 'Book deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.delete('/books/:id', requireAdmin, catchAsync(async (req, res) => {
+  const book = await Book.findByIdAndDelete(req.params.id);
+  if (!book) return res.status(404).json({ message: 'Book not found' });
+  const filePath = path.join(UPLOAD_DIR, book.filename);
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  delPattern('GET:/api/books');
+  res.json({ message: 'Book deleted successfully' });
+}));
 
 export default router;

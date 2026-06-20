@@ -8,6 +8,7 @@ import Module from '../models/moduleModel.js';
 import Case from '../models/caseModel.js';
 import { requireAdmin } from '../controllers/authController.js';
 import { getPagination, paginatedResponse } from '../utils/paginate.js';
+import { catchAsync } from '../utils/asyncHandler.js';
 
 const handleValidation = (req, res, next) => {
   const errors = validationResult(req);
@@ -30,55 +31,43 @@ const stripAnswers = (quiz) => {
 };
 
 // GET /api/quizzes — list (student-safe: no correctAnswers, only published)
-router.get('/quizzes', async (req, res) => {
-  try {
-    const filter = { published: true };
-    if (req.query.year)     filter.year     = Number(req.query.year);
-    if (req.query.moduleId) filter.moduleId = req.query.moduleId;
-    if (req.query.course)   filter.course   = req.query.course;
-    const { skip, limit, page } = getPagination(req.query);
-    const [quizzes, total] = await Promise.all([
-      Quiz.find(filter).populate('moduleId').populate('caseId').sort({ createdAt: -1 }).skip(skip).limit(limit),
-      Quiz.countDocuments(filter),
-    ]);
-    res.json(paginatedResponse(quizzes.map(stripAnswers), total, page, limit));
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.get('/quizzes', catchAsync(async (req, res) => {
+  const filter = { published: true };
+  if (req.query.year)     filter.year     = Number(req.query.year);
+  if (req.query.moduleId) filter.moduleId = req.query.moduleId;
+  if (req.query.course)   filter.course   = req.query.course;
+  const { skip, limit, page } = getPagination(req.query);
+  const [quizzes, total] = await Promise.all([
+    Quiz.find(filter).populate('moduleId').populate('caseId').sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Quiz.countDocuments(filter),
+  ]);
+  res.json(paginatedResponse(quizzes.map(stripAnswers), total, page, limit));
+}));
 
 // GET /api/quizzes/:id — single quiz (student-safe: no correctAnswers, only published)
-router.get('/quizzes/:id', async (req, res) => {
-  try {
-    const quiz = await Quiz.findById(req.params.id).populate('moduleId').populate('caseId');
-    if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
-    if (!quiz.published) return res.status(404).json({ message: 'Quiz not found' });
-    res.json(stripAnswers(quiz));
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.get('/quizzes/:id', catchAsync(async (req, res) => {
+  const quiz = await Quiz.findById(req.params.id).populate('moduleId').populate('caseId');
+  if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+  if (!quiz.published) return res.status(404).json({ message: 'Quiz not found' });
+  res.json(stripAnswers(quiz));
+}));
 
 // GET /api/admin/quizzes — full quiz list including correctAnswers (admin only)
-router.get('/admin/quizzes', requireAdmin, async (req, res) => {
-  try {
-    const filter = {};
-    if (req.query.year)     filter.year     = Number(req.query.year);
-    if (req.query.moduleId) filter.moduleId = req.query.moduleId;
-    if (req.query.search)   filter.$or = [
-      { quizId: { $regex: req.query.search, $options: 'i' } },
-      { 'question.questionText': { $regex: req.query.search, $options: 'i' } },
-    ];
-    const { skip, limit, page } = getPagination(req.query);
-    const [quizzes, total] = await Promise.all([
-      Quiz.find(filter).populate('moduleId').populate('caseId').sort({ createdAt: -1 }).skip(skip).limit(limit),
-      Quiz.countDocuments(filter),
-    ]);
-    res.json(paginatedResponse(quizzes, total, page, limit));
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.get('/admin/quizzes', requireAdmin, catchAsync(async (req, res) => {
+  const filter = {};
+  if (req.query.year)     filter.year     = Number(req.query.year);
+  if (req.query.moduleId) filter.moduleId = req.query.moduleId;
+  if (req.query.search)   filter.$or = [
+    { quizId: { $regex: req.query.search, $options: 'i' } },
+    { 'question.questionText': { $regex: req.query.search, $options: 'i' } },
+  ];
+  const { skip, limit, page } = getPagination(req.query);
+  const [quizzes, total] = await Promise.all([
+    Quiz.find(filter).populate('moduleId').populate('caseId').sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Quiz.countDocuments(filter),
+  ]);
+  res.json(paginatedResponse(quizzes, total, page, limit));
+}));
 
 // POST /api/create-quiz
 router.post('/create-quiz', requireAdmin, [
@@ -91,27 +80,23 @@ router.post('/create-quiz', requireAdmin, [
   body('published').optional().isBoolean(),
   body('explanation').optional().trim(),
   body('timer').optional().isInt({ min: 0 }),
-], handleValidation, async (req, res) => {
-  try {
-    const { quizId, moduleId, questionText, options, correctAnswers, course, published, explanation, timer } = req.body;
-    if (!quizId || !moduleId || !questionText || !options?.length || !correctAnswers?.length)
-      return res.status(400).json({ message: 'All fields are required' });
+], handleValidation, catchAsync(async (req, res) => {
+  const { quizId, moduleId, questionText, options, correctAnswers, course, published, explanation, timer } = req.body;
+  if (!quizId || !moduleId || !questionText || !options?.length || !correctAnswers?.length)
+    return res.status(400).json({ message: 'All fields are required' });
 
-    const existing = await Quiz.findOne({ quizId });
-    if (existing) return res.status(400).json({ message: `Quiz ID "${quizId}" already exists` });
+  const existing = await Quiz.findOne({ quizId });
+  if (existing) return res.status(400).json({ message: `Quiz ID "${quizId}" already exists` });
 
-    const module = await Module.findById(moduleId);
-    if (!module) return res.status(404).json({ message: 'Module not found' });
+  const module = await Module.findById(moduleId);
+  if (!module) return res.status(404).json({ message: 'Module not found' });
 
-    const quiz = await Quiz.create({
-      quizId, moduleId, year: module.year, course, published, explanation, timer,
-      question: { questionText, options, correctAnswers },
-    });
-    res.status(201).json({ message: 'Quiz created successfully', quiz });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+  const quiz = await Quiz.create({
+    quizId, moduleId, year: module.year, course, published, explanation, timer,
+    question: { questionText, options, correctAnswers },
+  });
+  res.status(201).json({ message: 'Quiz created successfully', quiz });
+}));
 
 // PUT /api/edit-quiz/:id
 router.put('/edit-quiz/:id', requireAdmin, [
@@ -125,142 +110,114 @@ router.put('/edit-quiz/:id', requireAdmin, [
   body('published').optional().isBoolean(),
   body('explanation').optional().trim(),
   body('timer').optional().isInt({ min: 0 }),
-], handleValidation, async (req, res) => {
-  try {
-    const { quizId, moduleId, questionText, options, correctAnswers, course, published, explanation, timer } = req.body;
-    let year;
-    if (moduleId) {
-      const module = await Module.findById(moduleId);
-      if (!module) return res.status(404).json({ message: 'Module not found' });
-      year = module.year;
-    }
-    const updated = await Quiz.findByIdAndUpdate(
-      req.params.id,
-      {
-        ...(quizId     && { quizId }),
-        ...(moduleId   && { moduleId }),
-        ...(year       && { year }),
+], handleValidation, catchAsync(async (req, res) => {
+  const { quizId, moduleId, questionText, options, correctAnswers, course, published, explanation, timer } = req.body;
+  let year;
+  if (moduleId) {
+    const module = await Module.findById(moduleId);
+    if (!module) return res.status(404).json({ message: 'Module not found' });
+    year = module.year;
+  }
+  const updated = await Quiz.findByIdAndUpdate(
+    req.params.id,
+    {
+      ...(quizId     && { quizId }),
+      ...(moduleId   && { moduleId }),
+      ...(year       && { year }),
       ...(course     !== undefined && { course }),
       ...(published  !== undefined && { published }),
       ...(explanation !== undefined && { explanation }),
       ...(timer      !== undefined && { timer }),
-        ...(questionText    && { 'question.questionText': questionText }),
-        ...(options         && { 'question.options': options }),
-        ...(correctAnswers  && { 'question.correctAnswers': correctAnswers }),
-      },
-      { new: true }
-    );
-    if (!updated) return res.status(404).json({ message: 'Quiz not found' });
-    res.json({ message: 'Quiz updated successfully', quiz: updated });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+      ...(questionText    && { 'question.questionText': questionText }),
+      ...(options         && { 'question.options': options }),
+      ...(correctAnswers  && { 'question.correctAnswers': correctAnswers }),
+    },
+    { new: true }
+  );
+  if (!updated) return res.status(404).json({ message: 'Quiz not found' });
+  res.json({ message: 'Quiz updated successfully', quiz: updated });
+}));
 
 // DELETE /api/delete-quiz/:id
 router.delete('/delete-quiz/:id', requireAdmin, [
   param('id').isMongoId(),
-], handleValidation, async (req, res) => {
-  try {
-    const quiz = await Quiz.findByIdAndDelete(req.params.id);
-    if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
-    res.json({ message: 'Quiz deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+], handleValidation, catchAsync(async (req, res) => {
+  const quiz = await Quiz.findByIdAndDelete(req.params.id);
+  if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+  res.json({ message: 'Quiz deleted successfully' });
+}));
 
 // GET /api/cases/:id — single case with its linked quizzes (student-safe)
-router.get('/cases/:id', async (req, res) => {
-  try {
-    const c = await Case.findById(req.params.id);
-    if (!c) return res.status(404).json({ message: 'Case not found' });
-    const quizzes = await Quiz.find({ caseId: c._id }).populate('moduleId');
-    res.json({ case: c, quizzes: quizzes.map(stripAnswers) });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.get('/cases/:id', catchAsync(async (req, res) => {
+  const c = await Case.findById(req.params.id);
+  if (!c) return res.status(404).json({ message: 'Case not found' });
+  const quizzes = await Quiz.find({ caseId: c._id }).populate('moduleId');
+  res.json({ case: c, quizzes: quizzes.map(stripAnswers) });
+}));
 
 // POST /api/admin/create-case-quizzes — creates 1 Case + quizzes (inline or placeholder)
-router.post('/admin/create-case-quizzes', requireAdmin, async (req, res) => {
-  try {
-    const { title, description, moduleId, quizzes } = req.body;
-    if (!title || !description || !moduleId || !quizzes?.length)
-      return res.status(400).json({ message: 'title, description, moduleId, and quizzes are required' });
-    if (quizzes.length > 50)
-      return res.status(400).json({ message: 'Maximum 50 quizzes per case' });
+router.post('/admin/create-case-quizzes', requireAdmin, catchAsync(async (req, res) => {
+  const { title, description, moduleId, quizzes } = req.body;
+  if (!title || !description || !moduleId || !quizzes?.length)
+    return res.status(400).json({ message: 'title, description, moduleId, and quizzes are required' });
+  if (quizzes.length > 50)
+    return res.status(400).json({ message: 'Maximum 50 quizzes per case' });
 
-    const module = await Module.findById(moduleId);
-    if (!module) return res.status(404).json({ message: 'Module not found' });
+  const module = await Module.findById(moduleId);
+  if (!module) return res.status(404).json({ message: 'Module not found' });
 
-    const caseDoc = await Case.create({ title, description, moduleId: module._id, year: module.year });
+  const caseDoc = await Case.create({ title, description, moduleId: module._id, year: module.year });
 
-    const caseNum = String(await Case.countDocuments()).padStart(3, '0');
-    const created = [];
-    for (let i = 0; i < quizzes.length; i++) {
-      const q = quizzes[i];
-      if (!q.questionText || !q.options?.length || !q.correctIndices?.length)
-        return res.status(400).json({ message: `Quiz ${i + 1}: questionText, options, and correctIndices are required` });
+  const caseNum = String(await Case.countDocuments()).padStart(3, '0');
+  const created = [];
+  for (let i = 0; i < quizzes.length; i++) {
+    const q = quizzes[i];
+    if (!q.questionText || !q.options?.length || !q.correctIndices?.length)
+      return res.status(400).json({ message: `Quiz ${i + 1}: questionText, options, and correctIndices are required` });
 
-      const correctAnswers = q.correctIndices.map((idx) => q.options[idx]);
-      if (correctAnswers.some((a) => a === undefined))
-        return res.status(400).json({ message: `Quiz ${i + 1}: correctIndices out of range` });
+    const correctAnswers = q.correctIndices.map((idx) => q.options[idx]);
+    if (correctAnswers.some((a) => a === undefined))
+      return res.status(400).json({ message: `Quiz ${i + 1}: correctIndices out of range` });
 
-      const quiz = await Quiz.create({
-        quizId: `CASE-${caseNum}-Q${i + 1}`,
-        quizName: `${title} — Q${i + 1}`,
-        moduleId: module._id,
-        year: module.year,
-        caseId: caseDoc._id,
-        published: false,
-        explanation: q.explanation || '',
-        question: { questionText: q.questionText, options: q.options, correctAnswers },
-      });
-      created.push(quiz);
-    }
-
-    res.status(201).json({ message: `Case and ${created.length} quizzes created`, case: caseDoc, quizzes: created });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const quiz = await Quiz.create({
+      quizId: `CASE-${caseNum}-Q${i + 1}`,
+      quizName: `${title} — Q${i + 1}`,
+      moduleId: module._id,
+      year: module.year,
+      caseId: caseDoc._id,
+      published: false,
+      explanation: q.explanation || '',
+      question: { questionText: q.questionText, options: q.options, correctAnswers },
+    });
+    created.push(quiz);
   }
-});
+
+  res.status(201).json({ message: `Case and ${created.length} quizzes created`, case: caseDoc, quizzes: created });
+}));
 
 // POST /api/admin/bulk-publish
-router.post('/bulk/publish', requireAdmin, async (req, res) => {
-  try {
-    const { ids } = req.body;
-    if (!ids?.length) return res.status(400).json({ message: 'ids array is required' });
-    await Quiz.updateMany({ _id: { $in: ids } }, { $set: { published: true } });
-    res.json({ message: `${ids.length} quiz publiés` });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.post('/bulk/publish', requireAdmin, catchAsync(async (req, res) => {
+  const { ids } = req.body;
+  if (!ids?.length) return res.status(400).json({ message: 'ids array is required' });
+  await Quiz.updateMany({ _id: { $in: ids } }, { $set: { published: true } });
+  res.json({ message: `${ids.length} quiz publiés` });
+}));
 
 // POST /api/admin/bulk-unpublish
-router.post('/bulk/unpublish', requireAdmin, async (req, res) => {
-  try {
-    const { ids } = req.body;
-    if (!ids?.length) return res.status(400).json({ message: 'ids array is required' });
-    await Quiz.updateMany({ _id: { $in: ids } }, { $set: { published: false } });
-    res.json({ message: `${ids.length} quiz dépubliés` });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.post('/bulk/unpublish', requireAdmin, catchAsync(async (req, res) => {
+  const { ids } = req.body;
+  if (!ids?.length) return res.status(400).json({ message: 'ids array is required' });
+  await Quiz.updateMany({ _id: { $in: ids } }, { $set: { published: false } });
+  res.json({ message: `${ids.length} quiz dépubliés` });
+}));
 
 // POST /api/admin/bulk-delete
-router.post('/bulk/delete', requireAdmin, async (req, res) => {
-  try {
-    const { ids } = req.body;
-    if (!ids?.length) return res.status(400).json({ message: 'ids array is required' });
-    const result = await Quiz.deleteMany({ _id: { $in: ids } });
-    res.json({ message: `${result.deletedCount} quiz supprimés` });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.post('/bulk/delete', requireAdmin, catchAsync(async (req, res) => {
+  const { ids } = req.body;
+  if (!ids?.length) return res.status(400).json({ message: 'ids array is required' });
+  const result = await Quiz.deleteMany({ _id: { $in: ids } });
+  res.json({ message: `${result.deletedCount} quiz supprimés` });
+}));
 
 // POST /api/import-quizzes-csv
 router.post('/import-quizzes-csv', requireAdmin, upload.single('file'), async (req, res) => {

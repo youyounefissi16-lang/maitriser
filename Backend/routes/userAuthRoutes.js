@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import User from '../models/userModel.js';
 import { verifyToken } from '../controllers/authController.js';
 import logger from '../utils/logger.js';
+import { catchAsync } from '../utils/asyncHandler.js';
 
 const router = express.Router();
 
@@ -83,15 +84,11 @@ router.post(
 router.get(
   '/users/profile',
   verifyToken,
-  async (req, res) => {
-    try {
-      const user = await User.findById(req.user.id).select('-password');
-      if (!user) return res.status(404).json({ message: 'User not found' });
-      res.json({ user });
-    } catch {
-      res.status(500).json({ message: 'Failed to fetch profile' });
-    }
-  }
+  catchAsync(async (req, res) => {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ user });
+  })
 );
 
 // PUT /api/users/profile — update own name/email (authenticated)
@@ -130,19 +127,15 @@ router.put(
     body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters'),
   ],
   handleValidation,
-  async (req, res) => {
-    try {
-      const user = await User.findById(req.user.id);
-      if (!user) return res.status(404).json({ message: 'User not found' });
-      const isMatch = await bcrypt.compare(req.body.currentPassword, user.password);
-      if (!isMatch) return res.status(400).json({ message: 'Current password is incorrect' });
-      user.password = req.body.newPassword;
-      await user.save();
-      res.json({ message: 'Password changed successfully' });
-    } catch {
-      res.status(500).json({ message: 'Failed to change password' });
-    }
-  }
+  catchAsync(async (req, res) => {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    const isMatch = await bcrypt.compare(req.body.currentPassword, user.password);
+    if (!isMatch) return res.status(400).json({ message: 'Current password is incorrect' });
+    user.password = req.body.newPassword;
+    await user.save();
+    res.json({ message: 'Password changed successfully' });
+  })
 );
 
 export default router;
