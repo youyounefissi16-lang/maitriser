@@ -1,0 +1,161 @@
+import React, { useState, useEffect } from 'react';
+import { authFetch } from '../config/authFetch';
+import { API_BASE_URL } from '../config/api';
+import '../styles/userManagement.css';
+import { FaSearch, FaEdit, FaTrash } from 'react-icons/fa';
+import AddUserModal from '../components/AddUserModal';
+import EditUserModal from '../components/EditUserModal';
+import ConfirmModal from '../components/ConfirmModal';
+import Spinner from '../components/Spinner';
+import Pagination from '../components/Pagination';
+
+const UserManagement = () => {
+  const [users, setUsers] = useState([]);
+  const [search, setSearch] = useState('');
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [isAddingUser, setIsAddingUser] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [notification, setNotification] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const fetchUsers = async (p) => {
+    const pg = p ?? page;
+    setLoading(true);
+    try {
+      const response = await authFetch(`/api/users?page=${pg}&limit=50`);
+      if (!response.ok) throw new Error('Failed to fetch users');
+      const d = await response.json();
+      setUsers(d.data || (Array.isArray(d) ? d : []));
+      setPage(d.page || 1);
+      setTotalPages(d.pages || 1);
+      setError('');
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchUsers(1); }, []);
+
+  useEffect(() => {
+    if (users.length > 0) {
+      const result = users.filter(user =>
+        user.name.toLowerCase().includes(search.toLowerCase()) ||
+        user.email.toLowerCase().includes(search.toLowerCase())
+      );
+      setFilteredUsers(result);
+    }
+  }, [search, users]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const response = await authFetch(`/api/users/delete-user/${deleteTarget._id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const errorData = await response.json();
+        setNotification(`Error: ${errorData.message || 'Failed to delete user'}`);
+        return;
+      }
+      setUsers(prev => prev.filter(user => user._id !== deleteTarget._id));
+      setNotification('User deleted successfully');
+    } catch {
+      setNotification('An error occurred while deleting the user.');
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleEdit = (user) => {
+    setSelectedUser(user);
+    setShowModal(true);
+  };
+
+  const handleAddUser = () => {
+    setIsAddingUser(true);
+    setShowModal(true);
+  };
+
+  if (loading) return <div className="user-management-container"><h2>User Management</h2><Spinner /></div>;
+
+  return (
+    <div className="user-management-container">
+      {notification && (
+        <div className={`error-banner`} style={{ background: notification.startsWith('Error') ? '#fdecea' : '#e8f5e9', borderColor: notification.startsWith('Error') ? '#f5c6cb' : '#c8e6c9', color: notification.startsWith('Error') ? '#a94442' : '#2e7d32' }}>
+          {notification}
+          <button onClick={() => setNotification('')}>&times;</button>
+        </div>
+      )}
+      {error && <div className="error-banner">{error}<button onClick={() => setError('')}>&times;</button></div>}
+
+      <div className="header">
+        <h2>User Management</h2>
+        <button type="button" className="add-user-btn" onClick={handleAddUser}>
+          + Add User
+        </button>
+      </div>
+
+      <div className="search-bar">
+        <input
+          type="text"
+          placeholder="Search users..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <FaSearch />
+      </div>
+
+      {!loading && <Pagination page={page} pages={totalPages} onPageChange={(p) => fetchUsers(p)} />}
+      <div className="user-table-wrapper">
+      <table className="user-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredUsers.length > 0 ? (
+            filteredUsers.map(user => (
+              <tr key={user._id}>
+                <td>{user.name}</td>
+                <td>{user.email}</td>
+                <td>{user.role}</td>
+                <td>
+                  <button type="button" onClick={() => handleEdit(user)} className="edit-btn"><FaEdit /></button>
+                  <button type="button" onClick={() => setDeleteTarget(user)} className="delete-btn"><FaTrash /></button>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr><td colSpan="4" className="admin-empty">No users found</td></tr>
+          )}
+        </tbody>
+      </table>
+      </div>
+
+      {isAddingUser && showModal && <AddUserModal setShowModal={setShowModal} fetchUsers={fetchUsers} />}
+      {!isAddingUser && showModal && selectedUser && (
+        <EditUserModal user={selectedUser} setShowModal={setShowModal} fetchUsers={fetchUsers} />
+      )}
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete User"
+        message={`Are you sure you want to delete ${deleteTarget?.name || 'this user'}?`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+        confirmText="Delete"
+      />
+    </div>
+  );
+};
+
+export default UserManagement;

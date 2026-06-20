@@ -1,0 +1,104 @@
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(13, 13, 26, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal-content {
+    background-color: var(--dc-white);
+    padding: 24px;
+    border-radius: var(--dc-radius);
+    width: 400px;
+    max-width: 90vw;
+    box-sizing: border-box;
+    box-shadow: var(--dc-shadow);
+    border: 1px solid var(--dc-border);
+  }
+
+  .modal-content h3 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: var(--dc-dark);
+  }
+
+  .input-group {
+    margin-bottom: 15px;
+  }
+
+  .modal-content label {
+    display: block;
+    margin-bottom: 15px;
+    margin-top: 7px;
+    font-weight: bold;
+    color: var(--dc-text);
+  }
+
+  .modal-content input,
+  .modal-content select {
+    width: 100%;
+    margin-right: 20px;
+    padding: 8px;
+    border: 1px solid var(--dc-border);
+    border-radius: 4px;
+    background: var(--dc-cream-light);
+    box-sizing: border-box;
+  }
+
+  .modal-content button {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, var(--dc-accent), var(--dc-deep));
+    color: var(--dc-white);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .modal-content button:hover {
+    opacity: 0.9;
+  }
+
+  .close-btn {
+    background: var(--dc-highlight) !important;
+    margin-top: 10px;
+  }
+
+  .close-btn:hover {
+    opacity: 0.9 !important;
+  }
+
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(13, 13, 26, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal-content {
+    background: var(--dc-white);
+    border-radius: var(--dc-radius);
+    width: 400px;
+    max-width: 90vw;
+    box-sizing: border-box;
+    padding-right: 50px;
+  }
+
+  .modal-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    gap: 10px;
+  }

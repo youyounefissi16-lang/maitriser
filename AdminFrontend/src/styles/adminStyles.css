@@ -1,0 +1,52 @@
+.admin-app {
+    display: flex;
+    overflow: hidden;
+  }
+
+  .main-content {
+    display: flex;
+    width: 100%;
+  }
+
+  .page-content {
+    padding: 50px 20px 70px;
+    background-color: var(--dc-cream);
+    flex: 1;
+    min-height: 100vh;
+  }
+
+  button {
+    font-size: 1rem;
+    padding: 10px 22px;
+    background: linear-gradient(135deg, var(--dc-accent), var(--dc-deep));
+    color: var(--dc-white);
+    border: none;
+    border-radius: var(--dc-radius-sm);
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+
+  button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  .card {
+    background-color: var(--dc-white);
+    padding: 20px;
+    border-radius: var(--dc-radius);
+    box-shadow: var(--dc-shadow-sm);
+    transition: box-shadow 0.2s;
+    border: 1px solid var(--dc-border);
+  }
+
+  .card:hover {
+    box-shadow: var(--dc-shadow);
+  }
+
+  @media (max-width: 768px) {
+    .page-content{
+      margin-left: 0 !important;
+    }
+  }

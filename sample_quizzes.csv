@@ -1,0 +1,4 @@
+quizId,quizName,moduleName,year,questionText,options,correctAnswers
+Q001,Cardiac Output Basics,Cardiology,3,What is the normal resting cardiac output in adults?,3-4 L/min|4-5 L/min|5-6 L/min|6-7 L/min,5-6 L/min
+Q002,Pneumonia Signs,Pulmonology,3,Which are classic signs of pneumonia?,Fever|Productive cough|Bradycardia|Dyspnea,Fever|Productive cough|Dyspnea
+Q003,Diabetes Type 1,Endocrinology,2,What is the primary defect in Type 1 Diabetes?,Insulin resistance|Beta cell destruction|Glucagon excess|Renal glucose loss,Beta cell destruction

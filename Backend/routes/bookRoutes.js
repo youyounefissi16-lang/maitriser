@@ -1,0 +1,124 @@
+import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import Book from '../models/bookModel.js';
+import { requireAdmin } from '../controllers/authController.js';
+import { cacheMiddleware, delPattern } from '../utils/cache.js';
+
+const router = express.Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+const UPLOAD_DIR = path.join(__dirname, '..', 'uploads', 'books');
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+  filename:    (_req, file, cb) => {
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    // Sanitize extension — only allow a strict whitelist, strip path separators
+    const ext = path.extname(file.originalname).toLowerCase();
+    const safeExt = ext === '.pdf' ? '.pdf' : '';
+    cb(null, `${unique}${safeExt}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'application/pdf') cb(null, true);
+    else cb(new Error('Only PDF files are allowed'));
+  },
+  limits: { fileSize: 50 * 1024 * 1024 },
+});
+
+// Upload book — moduleIds sent as JSON array string or comma-separated
+router.post('/books/upload', requireAdmin, upload.single('file'), async (req, res) => {
+  try {
+    const { title, moduleIds } = req.body;
+    if (!title || !moduleIds) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ message: 'title and moduleIds are required' });
+    }
+    let ids;
+    try { ids = Array.isArray(moduleIds) ? moduleIds : JSON.parse(moduleIds); }
+    catch { fs.unlinkSync(req.file.path); return res.status(400).json({ message: 'moduleIds must be a valid JSON array' }); }
+    if (!Array.isArray(ids) || !ids.length) { fs.unlinkSync(req.file.path); return res.status(400).json({ message: 'moduleIds must be a non-empty array' }); }
+    const book = await Book.create({
+      title, moduleIds: ids,
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+    });
+    delPattern('GET:/api/books');
+    res.status(201).json(book);
+  } catch (err) {
+    if (req.file) fs.unlinkSync(req.file.path);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// List books — filter by moduleId, year, or keyword search (cached 5 min)
+router.get('/books', cacheMiddleware(), async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.moduleId) filter.moduleIds = req.query.moduleId;
+    if (req.query.search)   filter.title = { $regex: req.query.search, $options: 'i' };
+    const books = await Book.find(filter).populate('moduleIds').sort({ createdAt: -1 });
+    res.json(books);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+const serveSafe = (filename) => {
+  const resolved = path.resolve(UPLOAD_DIR, filename);
+  if (!resolved.startsWith(path.resolve(UPLOAD_DIR))) throw new Error('Invalid file path');
+  return resolved;
+};
+
+// Download book PDF
+router.get('/books/download/:id', async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book) return res.status(404).json({ message: 'Book not found' });
+    const filePath = serveSafe(book.filename);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${book.originalName}"`);
+    fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Serve PDF file
+router.get('/books/file/:id', async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book) return res.status(404).json({ message: 'Book not found' });
+    const filePath = serveSafe(book.filename);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${book.originalName}"`);
+    fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Delete book
+router.delete('/books/:id', requireAdmin, async (req, res) => {
+  try {
+    const book = await Book.findByIdAndDelete(req.params.id);
+    if (!book) return res.status(404).json({ message: 'Book not found' });
+    const filePath = path.join(UPLOAD_DIR, book.filename);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    delPattern('GET:/api/books');
+    res.json({ message: 'Book deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+export default router;
