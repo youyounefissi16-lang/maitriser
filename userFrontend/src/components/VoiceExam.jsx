@@ -1,19 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { API_BASE_URL, authHeaders } from '../config/api';
+import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import '../styles/teal-theme.css';
 
-const Recorder = ({ onAudioReady }) => {
+const Recorder = ({ onAudioReady, onTranscript }) => {
   const [state, setState]       = useState('idle'); // idle | recording | done
   const [audioUrl, setAudioUrl] = useState(null);
   const [error, setError]       = useState('');
+  const [transcribing, setTranscribing] = useState(false);
+  const [unsupported, setUnsupported] = useState(false);
   const mediaRecorderRef        = useRef(null);
   const chunksRef               = useRef([]);
+  const recognitionRef          = useRef(null);
+  const finalTranscriptRef      = useRef('');
+
+  const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   const startRecording = async () => {
     setError('');
+    setUnsupported(false);
     chunksRef.current = [];
+    finalTranscriptRef.current = '';
+    if (onTranscript) onTranscript('');
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: mime });
 
@@ -31,34 +42,99 @@ const Recorder = ({ onAudioReady }) => {
       };
 
       mediaRecorderRef.current.onerror = () => {
-        setError('Erreur d\'enregistrement.');
+        setError("Erreur d'enregistrement.");
         setState('idle');
       };
 
       mediaRecorderRef.current.start();
       setState('recording');
+
+      if (SpeechRecognitionAPI) {
+        const recognition = new SpeechRecognitionAPI();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'fr-FR';
+
+        recognition.onresult = (event) => {
+          let interim = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const r = event.results[i];
+            if (r.isFinal) {
+              finalTranscriptRef.current += r[0].transcript;
+            } else {
+              interim += r[0].transcript;
+            }
+          }
+          if (onTranscript) onTranscript(finalTranscriptRef.current + interim);
+        };
+
+        recognition.onerror = (event) => {
+          if (event.error === 'no-speech' || event.error === 'aborted') return;
+          setError('Erreur de reconnaissance vocale.');
+          setTranscribing(false);
+        };
+
+        recognition.onend = () => {
+          setTranscribing(false);
+          if (onTranscript) onTranscript(finalTranscriptRef.current);
+        };
+
+        recognition.start();
+        setTranscribing(true);
+        recognitionRef.current = recognition;
+      } else {
+        setUnsupported(true);
+      }
     } catch {
       setError('Accès au micro refusé.');
     }
   };
 
   const stopRecording = () => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current = null;
+    }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
   };
 
+  const streamRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
+        recognitionRef.current = null;
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        try { mediaRecorderRef.current.stop(); } catch {}
+        mediaRecorderRef.current = null;
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
       {state === 'idle' && (
         <button type="button" onClick={startRecording} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #ccc', background: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
           🎤 Enregistrer
         </button>
       )}
       {state === 'recording' && (
-        <button type="button" onClick={stopRecording} style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#e74c3c', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-          🔴 Arrêter
-        </button>
+        <>
+          <button type="button" onClick={stopRecording} style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#e74c3c', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+            🔴 Arrêter
+          </button>
+          <span style={{ fontSize: 11, color: transcribing ? '#0C4A4A' : '#999' }}>
+            {transcribing ? '🎤 Transcription en cours...' : '⏳ En attente de voix'}
+          </span>
+        </>
       )}
       {state === 'done' && audioUrl && (
         <>
@@ -66,6 +142,7 @@ const Recorder = ({ onAudioReady }) => {
           <button type="button" onClick={() => { setState('idle'); setAudioUrl(null); if (onAudioReady) onAudioReady(null, null); }} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #ccc', background: '#fff', cursor: 'pointer', fontSize: 11 }}>
             ✕ Supprimer
           </button>
+          {unsupported && <span style={{ fontSize: 11, color: '#e67e22' }}>Saisie manuelle uniquement (Chrome recommandé)</span>}
         </>
       )}
       {error && <span style={{ color: '#e74c3c', fontSize: 12 }}>{error}</span>}
@@ -127,10 +204,9 @@ const VoiceExam = ({ exam, onBack }) => {
     setSubmitting(true);
     try {
       const body = { answers: answers.map((a, i) => ({ questionIndex: i, text: a.text })) };
-      const res = await fetch(`${API_BASE_URL}/api/voice-exams/${exam._id}/submit`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/voice-exams/${exam._id}/submit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify(body),
+        body,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Submission failed');
@@ -172,7 +248,7 @@ const VoiceExam = ({ exam, onBack }) => {
       {!result && exam.questions.map((q, qi) => (
         <div key={qi} className="voice-exam-question" style={{ marginBottom: 16, padding: 14, background: '#fff', borderRadius: 8, border: '1px solid #e0e0e0' }}>
           <p style={{ fontWeight: 600, margin: '0 0 8px' }}>Q{qi + 1}. {q.questionText}</p>
-          <Recorder />
+          <Recorder onTranscript={(text) => setAnswer(qi, text)} />
           <textarea
             placeholder="Écrivez votre réponse ici..."
             value={answers[qi]?.text || ''}

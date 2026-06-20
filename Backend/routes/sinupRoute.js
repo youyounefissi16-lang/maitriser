@@ -49,7 +49,7 @@ router.post(
     const { email, password } = req.body;
     try {
       const user = await User.findOne({ email, role: 'admin' });
-      if (!user) return res.status(404).json({ message: 'User not found.' });
+      if (!user) return res.status(401).json({ message: 'Invalid credentials.' });
 
       const isPasswordValid = await user.comparePassword(password);
       if (!isPasswordValid) return res.status(401).json({ message: 'Invalid credentials.' });

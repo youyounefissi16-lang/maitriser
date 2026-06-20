@@ -18,7 +18,7 @@ export async function authFetch(path, options = {}) {
   const res = await fetch(url, { ...options, headers });
 
   if (res.status === 401 || res.status === 403) {
-    window.location.href = '/logging';
+    throw new Error('Unauthorized');
   }
 
   return res;

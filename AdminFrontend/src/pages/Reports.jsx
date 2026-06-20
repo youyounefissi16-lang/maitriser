@@ -30,7 +30,7 @@ const Reports = () => {
     <div className="reports">
       <h2>Reports</h2>
       {error && <div className="error-banner">{error}</div>}
-      <div className="report-section">
+      {!error && <div className="report-section">
         <div className="report-card">
           <h3>Total Users</h3>
           <p>{stats?.users ?? 0}</p>
@@ -47,7 +47,7 @@ const Reports = () => {
           <h3>Pass Rate</h3>
           <p>{stats?.passRate ?? 0}%</p>
         </div>
-      </div>
+      </div>}
     </div>
   );
 };

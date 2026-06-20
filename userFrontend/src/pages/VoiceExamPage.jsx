@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { API_BASE_URL, authHeaders } from '../config/api';
+import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import VoiceExam from '../components/VoiceExam.jsx';
 import { SkeletonCard, SkeletonFilters } from '../components/LoadingSkeleton';
 import '../styles/teal-theme.css';
@@ -29,7 +29,7 @@ const VoiceExamPage = () => {
     setLoadingModules(true);
     setModulesError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/modules`, { headers: authHeaders() });
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/modules`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setModules(await res.json());
     } catch (err) {
@@ -46,7 +46,7 @@ const VoiceExamPage = () => {
       let url = `${API_BASE_URL}/api/voice-exams?`;
       if (selectedModuleId)  url += `moduleId=${selectedModuleId}`;
       else if (selectedYear) url += `year=${selectedYear}`;
-      const res = await fetch(url, { headers: authHeaders() });
+      const res = await fetchWithAuth(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setExams(await res.json());
     } catch (err) {

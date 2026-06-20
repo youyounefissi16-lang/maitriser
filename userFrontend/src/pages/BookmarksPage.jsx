@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL, authHeaders } from '../config/api';
+import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { SkeletonQuizItem } from '../components/LoadingSkeleton';
 import '../styles/teal-theme.css';
 
@@ -16,7 +16,7 @@ const BookmarksPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/bookmarks`, { headers: authHeaders() });
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/bookmarks`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setBookmarks(Array.isArray(data) ? data : []);
@@ -30,10 +30,9 @@ const BookmarksPage = () => {
   useEffect(() => { fetchBookmarks(); }, [fetchBookmarks]);
 
   const removeBookmark = async (quizId) => {
-    await fetch(`${API_BASE_URL}/api/bookmarks/toggle`, {
+    await fetchWithAuth(`${API_BASE_URL}/api/bookmarks/toggle`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify({ quizId }),
+      body: { quizId },
     });
     setBookmarks((prev) => prev.filter((b) => b.quizId?._id !== quizId));
   };

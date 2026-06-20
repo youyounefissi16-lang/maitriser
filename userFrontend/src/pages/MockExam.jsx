@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { API_BASE_URL, authHeaders } from '../config/api';
+import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { useToast } from '../components/Toast.jsx';
 import { useTranslation } from '../context/LanguageContext';
 import { shuffle } from '../utils/shuffle';
@@ -69,6 +69,56 @@ const MockExam = () => {
     return () => { window.removeEventListener('beforeunload', onLeave); mountedRef.current = false; };
   }, [submitted]);
 
+  const toggleOption = useCallback((qId, opt) => {
+    if (submitted) return;
+    setAnswers((prev) => {
+      const current = prev[qId] || [];
+      return {
+        ...prev,
+        [qId]: current.includes(opt)
+          ? current.filter((a) => a !== opt)
+          : [...current, opt],
+      };
+    });
+  }, [submitted]);
+
+  const handleSubmit = useCallback(async () => {
+    if (submitted) return;
+    const unanswered = questions.filter((q) => !answers[q._id] || answers[q._id].length === 0);
+    if (unanswered.length > 0) {
+      notify(t('mock.unanswered', { n: unanswered.length }), 'warning');
+      return;
+    }
+    setSubmitting(true);
+    clearTimeout(timerRef.current);
+    try {
+      const submissionResults = [];
+      const settledResults = await Promise.allSettled(
+        questions.map(async (q) => {
+          const selected = answers[q._id] || [];
+          const res = await fetchWithAuth(`${API_BASE_URL}/api/quizzes/${q._id}/submit`, {
+            method: 'POST',
+            body: { selectedAnswers: selected },
+          });
+          const data = await res.json();
+          return { quiz: q, ...data };
+        })
+      );
+      for (const r of settledResults) {
+        if (r.status === 'fulfilled') submissionResults.push(r.value);
+      }
+      if (mountedRef.current) {
+        clearSaved();
+        setResults(submissionResults);
+        setSubmitted(true);
+      }
+    } catch {
+      if (mountedRef.current) notify('Erreur lors de la soumission. Veuillez réessayer.', 'error');
+    } finally {
+      if (mountedRef.current) setSubmitting(false);
+    }
+  }, [submitted, questions, answers, notify, t]);
+
   // Pause timer when tab is hidden
   const hiddenRef = useRef(false);
   useEffect(() => {
@@ -85,59 +135,10 @@ const MockExam = () => {
     if (!submitted && timeLeft > 0) {
       timerRef.current = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
     } else if (timeLeft === 0 && !submitted && mountedRef.current) {
-      handleSubmit();
+      handleSubmit().catch(() => {});
     }
     return () => clearTimeout(timerRef.current);
-  }, [timeLeft, submitted]);
-
-  const toggleOption = useCallback((qId, opt) => {
-    if (submitted) return;
-    setAnswers((prev) => {
-      const current = prev[qId] || [];
-      return {
-        ...prev,
-        [qId]: current.includes(opt)
-          ? current.filter((a) => a !== opt)
-          : [...current, opt],
-      };
-    });
-  }, [submitted]);
-
-  const handleSubmit = async () => {
-    if (submitted) return;
-    const unanswered = questions.filter((q) => !answers[q._id] || answers[q._id].length === 0);
-    if (unanswered.length > 0) {
-      notify(t('mock.unanswered', { n: unanswered.length }), 'warning');
-      return;
-    }
-    setSubmitting(true);
-    clearTimeout(timerRef.current);
-    try {
-      const submissionResults = [];
-      for (const q of questions) {
-        const selected = answers[q._id] || [];
-        const res = await fetch(`${API_BASE_URL}/api/quizzes/${q._id}/submit`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders(),
-          },
-          body: JSON.stringify({ selectedAnswers: selected }),
-        });
-        const data = await res.json();
-        submissionResults.push({ quiz: q, ...data });
-      }
-      if (mountedRef.current) {
-        clearSaved();
-        setResults(submissionResults);
-        setSubmitted(true);
-      }
-    } catch {
-      if (mountedRef.current) notify('Erreur lors de la soumission. Veuillez réessayer.', 'error');
-    } finally {
-      if (mountedRef.current) setSubmitting(false);
-    }
-  };
+  }, [timeLeft, submitted, handleSubmit]);
 
   const formatTime = (s) => {
     const m = Math.floor(s / 60);

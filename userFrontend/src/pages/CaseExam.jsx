@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { API_BASE_URL, authHeaders } from '../config/api';
-import { getToken } from '../utils/tokenStore';
+import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { useToast } from '../components/Toast';
 import { SkeletonQuizItem } from '../components/LoadingSkeleton';
 import '../styles/teal-theme.css';
@@ -36,6 +35,10 @@ const CaseExam = () => {
     } catch { /* ignore */ }
   }, []);
 
+  const current = quizzes[currentIndex];
+  const isSubmitted = results[current?._id] !== undefined;
+  const allDone = quizzes.length > 0 && quizzes.every((q) => results[q._id] !== undefined);
+
   useEffect(() => {
     if (!quizzes.length || allDone) return;
     try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ caseId, currentIndex, results })); } catch { /* ignore */ }
@@ -53,7 +56,7 @@ const CaseExam = () => {
     const controller = new AbortController();
     (async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/cases/${caseId}`, { signal: controller.signal, headers: authHeaders() });
+        const res = await fetchWithAuth(`${API_BASE_URL}/api/cases/${caseId}`, { signal: controller.signal });
         if (!res.ok) throw new Error('Cas clinique introuvable');
         const data = await res.json();
         if (controller.signal.aborted) return;
@@ -69,10 +72,6 @@ const CaseExam = () => {
     return () => controller.abort();
   }, [caseId]);
 
-  const current = quizzes[currentIndex];
-  const isSubmitted = results[current?._id] !== undefined;
-  const allDone = quizzes.length > 0 && quizzes.every((q) => results[q._id] !== undefined);
-
   useEffect(() => {
     if (current) setSelected([]);
   }, [currentIndex, current]);
@@ -86,14 +85,9 @@ const CaseExam = () => {
     if (!current || selected.length === 0) return notify('Sélectionnez au moins une réponse.', 'warning');
     setSubmitting(true);
     try {
-      const token = getToken();
-      const res = await fetch(`${API_BASE_URL}/api/quizzes/${current._id}/submit`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/quizzes/${current._id}/submit`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ selectedAnswers: selected }),
+        body: { selectedAnswers: selected },
       });
       const data = await res.json();
       const newResults = { ...results, [current._id]: data };

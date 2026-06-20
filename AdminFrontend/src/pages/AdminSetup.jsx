@@ -47,7 +47,7 @@ const AdminSetup = () => {
       localStorage.setItem('adminRole', 'admin');
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid code');
+      setError(err.response?.data?.message || (err.message === 'Network Error' ? 'Network error. Please check your connection.' : 'Invalid code'));
     } finally {
       setLoading(false);
     }

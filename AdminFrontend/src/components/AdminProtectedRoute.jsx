@@ -3,6 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from "@clerk/react";
 import axios from 'axios';
 import { API_BASE_URL } from '../config/api';
+import { setToken } from '../utils/tokenStore';
 
 const AdminProtectedRoute = () => {
   const { isSignedIn, isLoaded, getToken } = useAuth();
@@ -13,6 +14,7 @@ const AdminProtectedRoute = () => {
     if (!isSignedIn || !isLoaded || synced) return;
     let aborted = false;
     const sync = async () => {
+      let controller, timeoutId;
       try {
         let token = await getToken();
         if (!token) {
@@ -24,15 +26,24 @@ const AdminProtectedRoute = () => {
           }
         }
         if (!token) throw new Error('No token');
+        setToken(token);
         if (aborted) return;
+        controller = new AbortController();
+        timeoutId = setTimeout(() => { controller.abort(); setSynced(true); }, 10000);
         const res = await axios.post(`${API_BASE_URL}/api/auth/clerk-sync`, {}, {
+          signal: controller.signal,
           headers: { Authorization: `Bearer ${token}` },
         });
+        clearTimeout(timeoutId);
         if (aborted) return;
         localStorage.setItem('adminRole', res.data.role);
         setRole(res.data.role);
-      } catch {}
-      if (!aborted) setSynced(true);
+        setSynced(true);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (aborted) return;
+        setSynced(true);
+      }
     };
     sync();
     return () => { aborted = true; };

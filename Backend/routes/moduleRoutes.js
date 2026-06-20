@@ -44,7 +44,7 @@ router.delete('/modules/:id', requireAdmin, catchAsync(async (req, res) => {
 }));
 
 // POST /api/import-modules-csv
-router.post('/import-modules-csv', requireAdmin, upload.single('file'), async (req, res) => {
+router.post('/import-modules-csv', requireAdmin, upload.single('file'), catchAsync(async (req, res) => {
   let filePath;
   try {
     if (!req.file) return res.status(400).json({ message: 'CSV file is required' });
@@ -72,7 +72,7 @@ router.post('/import-modules-csv', requireAdmin, upload.single('file'), async (r
         await Module.create({ name, year, courses });
         results.created++;
       } catch (e) {
-        results.errors.push(`Row "${row.name}": import error`);
+        results.errors.push(`Row "${row.name}": ${e.message}`);
       }
     }
 
@@ -84,6 +84,6 @@ router.post('/import-modules-csv', requireAdmin, upload.single('file'), async (r
     if (filePath) try { fs.unlinkSync(filePath); } catch { /* best-effort cleanup */ }
     res.status(500).json({ message: err.message });
   }
-});
+}));
 
 export default router;

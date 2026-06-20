@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { API_BASE_URL, authHeaders } from '../config/api';
-import { getToken } from '../utils/tokenStore';
+import { API_BASE_URL, fetchWithAuth } from '../config/api';
+import { refreshToken } from '../utils/tokenStore';
 import { SkeletonCard, SkeletonFilters } from '../components/LoadingSkeleton';
 import { useToast } from '../components/Toast';
 import '../styles/teal-theme.css';
@@ -16,6 +16,10 @@ const BooksPage = () => {
   const [searchQuery, setSearchQuery]           = useState('');
   const [debouncedSearch, setDebouncedSearch]   = useState('');
   const searchTimer = useRef(null);
+
+  useEffect(() => {
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, []);
   const [books, setBooks]                       = useState([]);
   const [openBook, setOpenBook]                 = useState(null);
   const [loadingModules, setLoadingModules]     = useState(true);
@@ -35,7 +39,7 @@ const BooksPage = () => {
     setLoadingModules(true);
     setModulesError(null);
     try {
-      const res  = await fetch(`${API_BASE_URL}/api/modules`, { headers: authHeaders() });
+      const res  = await fetchWithAuth(`${API_BASE_URL}/api/modules`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setModules(await res.json());
     } catch (err) {
@@ -52,7 +56,7 @@ const BooksPage = () => {
       let url = `${API_BASE_URL}/api/books?`;
       if (selectedModuleId)  url += `moduleId=${selectedModuleId}&`;
       if (debouncedSearch.trim()) url += `search=${encodeURIComponent(debouncedSearch.trim())}&`;
-      const res  = await fetch(url, { headers: authHeaders() });
+      const res  = await fetchWithAuth(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setBooks(await res.json());
     } catch (err) {
@@ -60,7 +64,7 @@ const BooksPage = () => {
     } finally {
       setLoadingBooks(false);
     }
-  }, [selectedModuleId, searchQuery]);
+  }, [selectedModuleId, debouncedSearch]);
 
   const handleDownload = async (book) => {
     try {

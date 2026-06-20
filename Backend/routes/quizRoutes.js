@@ -52,14 +52,16 @@ router.get('/quizzes/:id', catchAsync(async (req, res) => {
   res.json(stripAnswers(quiz));
 }));
 
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 // GET /api/admin/quizzes — full quiz list including correctAnswers (admin only)
 router.get('/admin/quizzes', requireAdmin, catchAsync(async (req, res) => {
   const filter = {};
   if (req.query.year)     filter.year     = Number(req.query.year);
   if (req.query.moduleId) filter.moduleId = req.query.moduleId;
   if (req.query.search)   filter.$or = [
-    { quizId: { $regex: req.query.search, $options: 'i' } },
-    { 'question.questionText': { $regex: req.query.search, $options: 'i' } },
+    { quizId: { $regex: escapeRegex(req.query.search), $options: 'i' } },
+    { 'question.questionText': { $regex: escapeRegex(req.query.search), $options: 'i' } },
   ];
   const { skip, limit, page } = getPagination(req.query);
   const [quizzes, total] = await Promise.all([
@@ -220,7 +222,7 @@ router.post('/bulk/delete', requireAdmin, catchAsync(async (req, res) => {
 }));
 
 // POST /api/import-quizzes-csv
-router.post('/import-quizzes-csv', requireAdmin, upload.single('file'), async (req, res) => {
+router.post('/import-quizzes-csv', requireAdmin, upload.single('file'), catchAsync(async (req, res) => {
   let filePath;
   try {
     if (!req.file) return res.status(400).json({ message: 'CSV file is required' });
@@ -255,7 +257,7 @@ router.post('/import-quizzes-csv', requireAdmin, upload.single('file'), async (r
         });
         results.created++;
       } catch (e) {
-        results.errors.push(`Row "${row.quizId}": import error`);
+        results.errors.push(`Row "${row.quizId}": ${e.message}`);
       }
     }
 
@@ -267,6 +269,6 @@ router.post('/import-quizzes-csv', requireAdmin, upload.single('file'), async (r
     if (filePath) try { fs.unlinkSync(filePath); } catch { /* best-effort cleanup */ }
     res.status(500).json({ message: err.message });
   }
-});
+}));
 
 export default router;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { API_BASE_URL, authHeaders } from '../config/api';
+import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { useToast } from '../components/Toast';
 import { useTranslation } from '../context/LanguageContext';
 import '../styles/teal-theme.css';
@@ -19,18 +19,25 @@ const ProfilePage = () => {
 
   useEffect(() => {
     document.title = 'Mon Profil — QuizApp';
-    fetchUser();
+    const controller = new AbortController();
+    fetchUser(controller.signal);
+    return () => controller.abort();
   }, []);
 
-  const fetchUser = async () => {
+  const fetchUser = async (signal) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/users/profile`, { headers: authHeaders() });
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/users/profile`, { signal });
       if (res.ok) {
         const data = await res.json();
         setName(data.user?.name || '');
         setEmail(data.user?.email || '');
+      } else {
+        notify('Erreur lors du chargement du profil.', 'error');
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      notify('Erreur lors du chargement du profil.', 'error');
+    }
     setLoading(false);
   };
 
@@ -38,10 +45,9 @@ const ProfilePage = () => {
     if (!name.trim()) return notify('Name is required', 'warning');
     setSaving(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/users/profile`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/users/profile`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ name: name.trim(), email: email.trim() }),
+        body: { name: name.trim(), email: email.trim() },
       });
       const data = await res.json();
       if (res.ok) {
@@ -57,10 +63,9 @@ const ProfilePage = () => {
     if (newPassword.length < 6) return notify('New password must be at least 6 characters', 'warning');
     setChangingPwd(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/users/change-password`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/users/change-password`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ currentPassword, newPassword }),
+        body: { currentPassword, newPassword },
       });
       const data = await res.json();
       if (res.ok) { notify(t('profile.pwdChanged'), 'success'); setCurrentPassword(''); setNewPassword(''); }

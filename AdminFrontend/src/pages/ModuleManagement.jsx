@@ -42,22 +42,30 @@ const ModuleManagement = () => {
 
   const handleSubmit = async () => {
     if (!name || !year) return notify('Name and year are required', 'warning');
-    const method = editId ? 'PUT' : 'POST';
-    const url    = editId ? `/api/modules/${editId}` : '/api/modules';
-    const res = await authFetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, year: Number(year), courses }),
-    });
-    if (res.ok) { fetchModules(); resetForm(); notify(editId ? 'Module updated' : 'Module created', 'success'); }
-    else notify('Operation failed', 'error');
+    try {
+      const method = editId ? 'PUT' : 'POST';
+      const url    = editId ? `/api/modules/${editId}` : '/api/modules';
+      const res = await authFetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, year: Number(year), courses }),
+      });
+      if (res.ok) { fetchModules(); resetForm(); notify(editId ? 'Module updated' : 'Module created', 'success'); }
+      else notify('Operation failed', 'error');
+    } catch (err) {
+      notify('Network error', 'error');
+    }
   };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    const res = await authFetch(`/api/modules/${deleteTarget._id}`, { method: 'DELETE' });
-    if (res.ok) { fetchModules(); notify('Module deleted', 'success'); }
-    else notify('Failed to delete', 'error');
+    try {
+      const res = await authFetch(`/api/modules/${deleteTarget._id}`, { method: 'DELETE' });
+      if (res.ok) { fetchModules(); notify('Module deleted', 'success'); }
+      else notify('Failed to delete', 'error');
+    } catch (err) {
+      notify('Network error', 'error');
+    }
     setDeleteTarget(null);
   };
 

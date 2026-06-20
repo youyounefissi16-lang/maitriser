@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { authFetch } from '../config/authFetch';
 import { FaTrash, FaEdit, FaImage, FaPlus, FaTimes } from 'react-icons/fa';
 import { API_BASE_URL } from '../config/api';
@@ -44,9 +44,13 @@ const VoiceExamManagement = () => {
 
   useEffect(() => { fetchExams(); }, [filterYear, filterModule]);
 
+  const previewsRef = useRef(previews);
   useEffect(() => {
-    return () => previews.forEach((p) => URL.revokeObjectURL(p));
+    previewsRef.current = previews;
   }, [previews]);
+  useEffect(() => {
+    return () => previewsRef.current.forEach((p) => URL.revokeObjectURL(p));
+  }, []);
 
   const fetchModules = async () => {
     try {
@@ -157,29 +161,33 @@ const VoiceExamManagement = () => {
       existingImages,
     });
 
-    if (hasFiles) {
-      const fd = new FormData();
-      fd.append('title', title);
-      fd.append('moduleId', moduleId);
-      fd.append('clinicalCasePrompt', clinicalCasePrompt);
-      fd.append('questions', JSON.stringify(validQuestions));
-      fd.append('existingImages', JSON.stringify(existingImages));
-      newImages.forEach((f) => fd.append('images', f));
+    try {
+      if (hasFiles) {
+        const fd = new FormData();
+        fd.append('title', title);
+        fd.append('moduleId', moduleId);
+        fd.append('clinicalCasePrompt', clinicalCasePrompt);
+        fd.append('questions', JSON.stringify(validQuestions));
+        fd.append('existingImages', JSON.stringify(existingImages));
+        newImages.forEach((f) => fd.append('images', f));
 
-      const token = getToken();
-      const res = await fetch(`${API_BASE_URL}${url}`, {
-        method,
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: fd,
-      });
-      const data = await res.json();
-      if (res.ok) { fetchExams(); resetForm(); notify(editId ? 'Exam updated' : 'Exam created', 'success'); }
-      else notify(`Failed: ${data.message}`, 'error');
-    } else {
-      const res  = await authFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body });
-      const data = await res.json();
-      if (res.ok) { fetchExams(); resetForm(); notify(editId ? 'Exam updated' : 'Exam created', 'success'); }
-      else notify(`Failed: ${data.message}`, 'error');
+        const token = getToken();
+        const res = await fetch(`${API_BASE_URL}${url}`, {
+          method,
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: fd,
+        });
+        const data = await res.json();
+        if (res.ok) { fetchExams(); resetForm(); notify(editId ? 'Exam updated' : 'Exam created', 'success'); }
+        else notify(`Failed: ${data.message}`, 'error');
+      } else {
+        const res  = await authFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body });
+        const data = await res.json();
+        if (res.ok) { fetchExams(); resetForm(); notify(editId ? 'Exam updated' : 'Exam created', 'success'); }
+        else notify(`Failed: ${data.message}`, 'error');
+      }
+    } catch (err) {
+      notify('Network error', 'error');
     }
   };
 

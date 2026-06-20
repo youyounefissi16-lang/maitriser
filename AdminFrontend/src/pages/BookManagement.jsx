@@ -77,9 +77,13 @@ const BookManagement = () => {
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    const res = await authFetch(`/api/books/${deleteTarget._id}`, { method: 'DELETE' });
-    if (res.ok) { fetchBooks(); notify('Book deleted', 'success'); }
-    else notify('Failed to delete book', 'error');
+    try {
+      const res = await authFetch(`/api/books/${deleteTarget._id}`, { method: 'DELETE' });
+      if (res.ok) { fetchBooks(); notify('Book deleted', 'success'); }
+      else notify('Failed to delete book', 'error');
+    } catch (err) {
+      notify('Network error', 'error');
+    }
     setDeleteTarget(null);
   };
 

@@ -33,7 +33,7 @@ const AddUserModal = ({ setShowModal, fetchUsers }) => {
       }
     } catch (error) {
       const msg = error.response?.data?.message || 'Error adding user.';
-      alert(msg);
+      console.warn(msg);
     } finally {
       setLoading(false);
     }

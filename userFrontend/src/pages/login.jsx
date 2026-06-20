@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { SignIn, useAuth, useClerk } from "@clerk/react";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { setToken } from '../utils/tokenStore';
 import '../styles/teal-theme.css';
 import '../styles/pagesStyle/login.css';
 
@@ -14,6 +15,7 @@ const Login = () => {
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || synced.current || status !== 'idle') return;
+    let aborted = false;
     localStorage.removeItem('userId');
     setStatus('syncing');
     const sync = async () => {
@@ -21,25 +23,30 @@ const Login = () => {
         let token = await getToken();
         if (!token) {
           for (let i = 0; i < 10; i++) {
+            if (aborted) return;
             await new Promise((r) => setTimeout(r, 300));
             token = await getToken();
             if (token) break;
           }
         }
+        if (aborted) return;
         if (!token) throw new Error('No token');
+        setToken(token);
         const res = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL}/api/auth/clerk-sync`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        if (aborted) return;
         localStorage.setItem('userId', res.data.userId);
         synced.current = true;
         navigate('/', { replace: true });
       } catch {
-        setStatus('sync_failed');
+        if (!aborted) setStatus('sync_failed');
       }
     };
     sync();
+    return () => { aborted = true; };
   }, [isLoaded, isSignedIn, status, getToken, navigate]);
 
   if (!isLoaded) return <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>Loading...</div>;

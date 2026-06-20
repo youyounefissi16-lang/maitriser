@@ -1,8 +1,16 @@
-import React from 'react';
-import { SignIn } from "@clerk/react";
+import React, { useEffect } from 'react';
+import { SignIn, useAuth } from "@clerk/react";
+import { useNavigate } from 'react-router-dom';
 import '../styles/adminLogin.css';
 
 const AdminLogin = () => {
+  const { isSignedIn, isLoaded } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) navigate('/');
+  }, [isLoaded, isSignedIn, navigate]);
+
   return (
     <div className="form-container">
       <div className="form">

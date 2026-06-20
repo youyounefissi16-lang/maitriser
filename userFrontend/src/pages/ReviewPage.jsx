@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL, authHeaders } from '../config/api';
-import { getToken } from '../utils/tokenStore';
+import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { SkeletonQuizItem } from '../components/LoadingSkeleton';
 import '../styles/teal-theme.css';
 
@@ -17,10 +16,7 @@ const ReviewPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const token = getToken();
-      const res = await fetch(`${API_BASE_URL}/api/results/${userId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/results/${userId}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const results = Array.isArray(data) ? data : [];

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { API_BASE_URL } from '../config/api';
-import { getToken } from '../utils/tokenStore';
+import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useToast } from './Toast.jsx';
 import { SkeletonQuizItem } from './LoadingSkeleton';
@@ -27,6 +26,8 @@ const QuizCard = () => {
   const [timerActive, setTimerActive] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const timerRef = useRef(null);
+  const submittingRef = useRef(false);
+  const handleSubmitRef = useRef(null);
 
   const userId = localStorage.getItem('userId') || 'anonymous';
   const studyMode = state?.studyMode || false;
@@ -45,15 +46,13 @@ const QuizCard = () => {
     if (quizData) return;
     if (!id) { navigate('/quizPage'); return; }
 
-    const token = getToken();
-    fetch(`${API_BASE_URL}/api/quizzes/${id}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error('Quiz not found');
-        return r.json();
-      })
-      .then((data) => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetchWithAuth(`${API_BASE_URL}/api/quizzes/${id}`, { signal: controller.signal });
+        if (!res.ok) throw new Error('Quiz not found');
+        const data = await res.json();
+        if (controller.signal.aborted) return;
         const t = data.timer || TIMER_SECONDS;
         setQuizTimer(t);
         setTimeLeft(t);
@@ -66,9 +65,13 @@ const QuizCard = () => {
           },
           caseId: data.caseId || null,
         });
-      })
-      .catch(() => navigate('/quizPage'))
-      .finally(() => setLoading(false));
+      } catch (err) {
+        if (err.name !== 'AbortError') navigate('/quizPage');
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    })();
+    return () => controller.abort();
   }, [id]);
 
   const hiddenRef = useRef(false);
@@ -85,8 +88,8 @@ const QuizCard = () => {
     if (hiddenRef.current || studyMode) return;
     if (timerActive && timeLeft > 0 && !submitted) {
       timerRef.current = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
-    } else if (timerActive && timeLeft === 0 && !submitted) {
-      handleSubmit();
+    } else if (timerActive && timeLeft === 0 && !submitted && handleSubmitRef.current) {
+      handleSubmitRef.current();
     }
     return () => clearTimeout(timerRef.current);
   }, [timerActive, timeLeft, submitted, studyMode]);
@@ -100,15 +103,14 @@ const QuizCard = () => {
   useEffect(() => {
     if (!quizData?.quizId) return;
     const controller = new AbortController();
-    const token = getToken();
-    if (!token) return;
-    fetch(`${API_BASE_URL}/api/bookmarks/${quizData.quizId}`, {
-      signal: controller.signal,
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((data) => { if (!controller.signal.aborted) setBookmarked(data.bookmarked); })
-      .catch(() => {});
+    (async () => {
+      try {
+        const res = await fetchWithAuth(`${API_BASE_URL}/api/bookmarks/${quizData.quizId}`, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        const data = await res.json();
+        setBookmarked(data.bookmarked);
+      } catch { /* ignore */ }
+    })();
     return () => controller.abort();
   }, [quizData?.quizId]);
 
@@ -130,14 +132,9 @@ const QuizCard = () => {
   const handleStudyCheck = async (opt) => {
     setSubmitting(true);
     try {
-      const token = getToken();
-      const res = await fetch(`${API_BASE_URL}/api/quizzes/${quizData.quizId}/submit`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/quizzes/${quizData.quizId}/submit`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ selectedAnswers: [opt] }),
+        body: { selectedAnswers: [opt] },
       });
       const data = await res.json();
       setResult(data);
@@ -150,20 +147,16 @@ const QuizCard = () => {
   };
 
   const handleSubmit = async () => {
-    if (submitted) return;
+    if (submitted || submittingRef.current) return;
     if (selected.length === 0) return notify('Sélectionnez au moins une réponse.', 'warning');
+    submittingRef.current = true;
     setSubmitting(true);
     setTimerActive(false);
     clearTimeout(timerRef.current);
     try {
-      const token = getToken();
-      const res = await fetch(`${API_BASE_URL}/api/quizzes/${quizData.quizId}/submit`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/quizzes/${quizData.quizId}/submit`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ selectedAnswers: selected }),
+        body: { selectedAnswers: selected },
       });
       const data = await res.json();
       setResult(data);
@@ -171,18 +164,21 @@ const QuizCard = () => {
     } catch {
       notify('Échec de la soumission. Veuillez réessayer.', 'error');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
+  handleSubmitRef.current = handleSubmit;
 
   const toggleBookmark = async () => {
-    const res = await fetch(`${API_BASE_URL}/api/bookmarks/toggle`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify({ quizId: quizData.quizId }),
-    });
-    const data = await res.json();
-    setBookmarked(data.bookmarked);
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/bookmarks/toggle`, {
+        method: 'POST',
+        body: { quizId: quizData.quizId },
+      });
+      const data = await res.json();
+      setBookmarked(data.bookmarked);
+    } catch { /* ignore */ }
   };
 
   const formatTime = (s) => {

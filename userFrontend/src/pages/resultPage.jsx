@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { API_BASE_URL } from '../config/api';
-import { getToken } from '../utils/tokenStore';
+import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { SkeletonQuizItem } from '../components/LoadingSkeleton';
 import Pagination from '../components/Pagination';
 import '../styles/teal-theme.css';
@@ -22,10 +21,8 @@ const ResultPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const token = getToken();
-      const res = await fetch(`${API_BASE_URL}/api/results/${userId}?page=${pg}&limit=50`, {
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/results/${userId}?page=${pg}&limit=50`, {
         signal: signal instanceof AbortSignal ? signal : undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const d = await res.json();
       if (signal instanceof AbortSignal && signal.aborted) return;

@@ -95,9 +95,25 @@ const UserManagement = () => {
 
       <div className="header">
         <h2>User Management</h2>
-        <button type="button" className="add-user-btn" onClick={handleAddUser}>
-          + Add User
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" className="add-user-btn" onClick={async () => {
+            try {
+              const res = await authFetch('/api/admin/sync-all-users', { method: 'POST' });
+              if (res.ok) {
+                const d = await res.json();
+                setNotification(`Clerk sync done: ${d.synced} user(s) imported`);
+                fetchUsers(1);
+              } else {
+                setNotification('Sync failed');
+              }
+            } catch { setNotification('Sync failed'); }
+          }} style={{ background: '#0C4A4A' }}>
+            Sync from Clerk
+          </button>
+          <button type="button" className="add-user-btn" onClick={handleAddUser}>
+            + Add User
+          </button>
+        </div>
       </div>
 
       <div className="search-bar">

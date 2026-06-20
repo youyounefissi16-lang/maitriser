@@ -35,16 +35,16 @@ const upload = multer({
 });
 
 // Upload book — moduleIds sent as JSON array string or comma-separated
-router.post('/books/upload', requireAdmin, upload.single('file'), async (req, res) => {
+router.post('/books/upload', requireAdmin, upload.single('file'), catchAsync(async (req, res) => {
   try {
     const { title, moduleIds } = req.body;
     if (!title || !moduleIds) {
-      fs.unlinkSync(req.file.path);
+      if (req.file) fs.unlinkSync(req.file.path);
       return res.status(400).json({ message: 'title and moduleIds are required' });
     }
     let ids;
     try { ids = Array.isArray(moduleIds) ? moduleIds : JSON.parse(moduleIds); }
-    catch { fs.unlinkSync(req.file.path); return res.status(400).json({ message: 'moduleIds must be a valid JSON array' }); }
+    catch { if (req.file) fs.unlinkSync(req.file.path); return res.status(400).json({ message: 'moduleIds must be a valid JSON array' }); }
     if (!Array.isArray(ids) || !ids.length) { fs.unlinkSync(req.file.path); return res.status(400).json({ message: 'moduleIds must be a non-empty array' }); }
     const book = await Book.create({
       title, moduleIds: ids,
@@ -57,7 +57,7 @@ router.post('/books/upload', requireAdmin, upload.single('file'), async (req, re
     if (req.file) fs.unlinkSync(req.file.path);
     res.status(500).json({ message: err.message });
   }
-});
+}));
 
 // List books — filter by moduleId, year, or keyword search (cached 5 min)
 router.get('/books', cacheMiddleware(), catchAsync(async (req, res) => {

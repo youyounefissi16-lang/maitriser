@@ -30,11 +30,14 @@ app.use(helmet());
 app.use(compression());
 app.use(httpLogger);
 
+// Private Network Access header — must be before cors so it's set on preflight OPTIONS responses
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  next();
+});
+
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-    else callback(new Error('Not allowed by CORS'));
-  },
+  origin: (origin, callback) => callback(null, true),
   credentials: true,
 }));
 
@@ -90,7 +93,8 @@ app.use('/api', verifyToken, requireAdmin, userRoutes);
 app.use('/api', verifyToken, requireAdmin, dashboardRoutes);
 
 app.use((err, req, res, next) => {
-  res.status(err.status || 500).json({ message: err.message || 'Internal server error' });
+  console.error('Unhandled error:', err);
+  res.status(err.status || 500).json({ message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message || 'Internal server error' });
 });
 
 export default app;

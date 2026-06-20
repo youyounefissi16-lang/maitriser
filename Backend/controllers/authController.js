@@ -4,6 +4,8 @@ import User from '../models/userModel.js';
 import logger from '../utils/logger.js';
 
 export const verifyToken = async (req, res, next) => {
+  if (req.user) return next();
+
   const authHeader = req.headers['authorization'];
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ message: 'Access denied. No token provided.' });

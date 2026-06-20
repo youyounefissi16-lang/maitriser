@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { API_BASE_URL, authHeaders } from '../config/api';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { useNavigate } from 'react-router-dom';
 import { SkeletonQuizItem, SkeletonFilters } from '../components/LoadingSkeleton';
 import { useToast } from '../components/Toast.jsx';
@@ -54,16 +54,14 @@ const QuizPage = () => {
   }, [selectedModuleId, modules]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetchQuizzes(controller.signal);
-    return () => controller.abort();
+    fetchQuizzes(1);
   }, [selectedYear, selectedModuleId, selectedCourse]);
 
   const fetchModules = async (signal) => {
     setLoadingModules(true);
     setModulesError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/modules`, { signal, headers: authHeaders() });
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/modules`, { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       if (!signal.aborted) setModules(await res.json());
     } catch (err) {
@@ -74,28 +72,29 @@ const QuizPage = () => {
     }
   };
 
-  const fetchQuizzes = useCallback(async (signal) => {
-    const pg = signal instanceof AbortSignal ? 1 : signal ?? 1;
-    const sig = signal instanceof AbortSignal ? signal : undefined;
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+
+  const fetchQuizzes = useCallback(async (pg) => {
+    const pageNum = typeof pg === 'number' ? pg : 1;
     setLoadingQuizzes(true);
     setQuizzesError(null);
     try {
-      let url = `${API_BASE_URL}/api/quizzes?page=${pg}&limit=50`;
+      let url = `${API_BASE_URL}/api/quizzes?page=${pageNum}&limit=50`;
       if (selectedModuleId)      url += `&moduleId=${selectedModuleId}`;
       else if (selectedYear)     url += `&year=${selectedYear}`;
       if (selectedCourse)        url += `&course=${encodeURIComponent(selectedCourse)}`;
-      const res = await fetch(url, { signal: sig, headers: authHeaders() });
+      const res = await fetchWithAuth(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d = await res.json();
-      if (sig?.aborted) return;
+      if (!mountedRef.current) return;
       setQuizzes(d.data || (Array.isArray(d) ? d : []));
       setPage(d.page || 1);
       setTotalPages(d.pages || 1);
     } catch (err) {
-      if (err.name === 'AbortError') return;
       setQuizzesError(err.message);
     } finally {
-      if (!sig?.aborted) setLoadingQuizzes(false);
+      if (mountedRef.current) setLoadingQuizzes(false);
     }
   }, [selectedYear, selectedModuleId, selectedCourse]);
 
@@ -144,7 +143,7 @@ const QuizPage = () => {
       const caseMap = {};
       for (const cid of caseIds) {
         try {
-          const res = await fetch(`${API_BASE_URL}/api/cases/${cid}`, { headers: authHeaders() });
+          const res = await fetchWithAuth(`${API_BASE_URL}/api/cases/${cid}`);
           if (res.ok) caseMap[cid] = await res.json();
         } catch { /* skip failed case fetch */ }
       }

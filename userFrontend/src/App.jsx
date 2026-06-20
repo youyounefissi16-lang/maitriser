@@ -9,7 +9,7 @@ import ProtectedRoute from './components/protectedRoute';
 import { ToastProvider } from './components/Toast.jsx';
 import { LanguageProvider, useTranslation } from './context/LanguageContext';
 import axios from 'axios';
-import { setToken } from './utils/tokenStore';
+import { setToken, setTokenGetter } from './utils/tokenStore';
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -38,20 +38,26 @@ const ClerkAxiosSetup = ({ children }) => {
 
   useEffect(() => {
     if (!isLoaded) return;
+    setTokenGetter(() => getTokenRef.current());
     let aborted = false;
     (async () => {
       let token = await getTokenRef.current();
       if (!token && isSignedIn) {
-        for (let i = 0; i < 10; i++) {
-          await new Promise((r) => setTimeout(r, 300));
+        for (let i = 0; i < 30; i++) {
+          await new Promise((r) => setTimeout(r, 500));
           if (aborted) return;
           token = await getTokenRef.current();
           if (token) break;
         }
       }
       if (aborted) return;
-      if (token) setToken(token);
-      setReady(true);
+      if (token) {
+        setToken(token);
+        getTokenRef.current().then((t) => { if (t) setToken(t); }).catch(() => {});
+        setReady(true);
+      } else if (!isSignedIn) {
+        setReady(true);
+      }
     })();
     const interceptor = axios.interceptors.request.use(async (config) => {
       const token = await getTokenRef.current();
@@ -61,13 +67,18 @@ const ClerkAxiosSetup = ({ children }) => {
       }
       return config;
     });
+    const refreshInterval = setInterval(async () => {
+      if (aborted) return;
+      getTokenRef.current().then((token) => { if (token) setToken(token); }).catch(() => {});
+    }, 30 * 1000);
     return () => {
       aborted = true;
       axios.interceptors.request.eject(interceptor);
+      clearInterval(refreshInterval);
     };
   }, [isLoaded, isSignedIn]);
 
-  if (!ready) return null;
+  if (!ready) return <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}><div className="card-teal" style={{ textAlign: 'center', padding: 40 }}>Chargement…</div></div>;
   return children;
 };
 
@@ -133,12 +144,36 @@ const AppContent = () => {
   );
 };
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+          <div className="card-teal" style={{ textAlign: 'center', padding: 40 }}>
+            <h2>Une erreur est survenue</h2>
+            <p style={{ color: '#e74c3c', margin: '12px 0' }}>{this.state.error.message}</p>
+            <button className="btn-primary" onClick={() => window.location.reload()}>Recharger la page</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const App = () => {
   return (
     <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
-      <ClerkAxiosSetup>
-        <AppContent />
-      </ClerkAxiosSetup>
+      <ErrorBoundary>
+        <ClerkAxiosSetup>
+          <AppContent />
+        </ClerkAxiosSetup>
+      </ErrorBoundary>
     </ClerkProvider>
   );
 };

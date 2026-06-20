@@ -140,17 +140,25 @@ const QuizManagement = () => {
     const url    = editId ? `/api/edit-quiz/${editId}` : '/api/create-quiz';
     const method = editId ? 'PUT' : 'POST';
 
-    const res = await authFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const data = await res.json();
-    if (res.ok) { fetchQuizzes(); resetForm(); notify(editId ? 'Quiz updated' : 'Quiz created', 'success'); }
-    else notify(`Error: ${data.message}`, 'error');
+    try {
+      const res = await authFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (res.ok) { fetchQuizzes(); resetForm(); notify(editId ? 'Quiz updated' : 'Quiz created', 'success'); }
+      else notify(`Error: ${data.message}`, 'error');
+    } catch (err) {
+      notify('Network error', 'error');
+    }
   };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    const res = await authFetch(`/api/delete-quiz/${deleteTarget._id}`, { method: 'DELETE' });
-    if (res.ok) { fetchQuizzes(); notify('Quiz deleted', 'success'); }
-    else notify('Failed to delete', 'error');
+    try {
+      const res = await authFetch(`/api/delete-quiz/${deleteTarget._id}`, { method: 'DELETE' });
+      if (res.ok) { fetchQuizzes(); notify('Quiz deleted', 'success'); }
+      else notify('Failed to delete', 'error');
+    } catch (err) {
+      notify('Network error', 'error');
+    }
     setDeleteTarget(null);
   };
 

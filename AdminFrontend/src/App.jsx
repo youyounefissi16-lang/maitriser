@@ -7,7 +7,7 @@ import AdminProtectedRoute from "./components/AdminProtectedRoute.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { ToastProvider } from "./components/Toast";
 import axios from "axios";
-import { setToken } from "./utils/tokenStore";
+import { setToken, setTokenGetter } from "./utils/tokenStore";
 import "./styles/adminTheme.css";
 import "./styles/adminStyles.css";
 import "./styles/sharedAdmin.css";
@@ -27,7 +27,7 @@ const AdminSignup = lazy(() => import("./pages/AdminSignup.jsx"));
 const AdminSetup = lazy(() => import("./pages/AdminSetup.jsx"));
 const NotFound = lazy(() => import("./pages/NotFound.jsx"));
 
-const ClerkAxiosSetup = () => {
+const ClerkAxiosSetup = ({ children }) => {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [ready, setReady] = useState(false);
   const getTokenRef = useRef(getToken);
@@ -35,20 +35,25 @@ const ClerkAxiosSetup = () => {
 
   useEffect(() => {
     if (!isLoaded) return;
+    setTokenGetter(() => getTokenRef.current());
     let aborted = false;
     (async () => {
       let token = await getTokenRef.current();
       if (!token && isSignedIn) {
-        for (let i = 0; i < 10; i++) {
-          await new Promise((r) => setTimeout(r, 300));
+        for (let i = 0; i < 30; i++) {
+          await new Promise((r) => setTimeout(r, 500));
           if (aborted) return;
           token = await getTokenRef.current();
           if (token) break;
         }
       }
       if (aborted) return;
-      if (token) setToken(token);
-      setReady(true);
+      if (token) {
+        setToken(token);
+        setReady(true);
+      } else if (!isSignedIn) {
+        setReady(true);
+      }
     })();
     const interceptor = axios.interceptors.request.use(async (config) => {
       const token = await getTokenRef.current();
@@ -58,13 +63,20 @@ const ClerkAxiosSetup = () => {
       }
       return config;
     });
+    const refreshInterval = setInterval(async () => {
+      if (aborted) return;
+      const token = await getTokenRef.current();
+      if (token) setToken(token);
+    }, 5 * 60 * 1000);
     return () => {
       aborted = true;
       axios.interceptors.request.eject(interceptor);
+      clearInterval(refreshInterval);
     };
   }, [isLoaded, isSignedIn]);
-  if (!ready) return null;
-  return null;
+  if (!isLoaded) return <div className="admin-page" style={{ padding: 60, textAlign: 'center' }}>Initialisation…</div>;
+  if (!ready) return <div className="admin-page" style={{ padding: 60, textAlign: 'center' }}>Initialisation…</div>;
+  return <>{children}</>;
 };
 
 const AppContent = () => {
@@ -74,7 +86,7 @@ const AppContent = () => {
   return (
     <ThemeProvider>
       <ToastProvider>
-        <ClerkAxiosSetup />
+        <ClerkAxiosSetup>
         <div className="admin-app">
           <Suspense fallback={<div className="admin-page" style={{ padding: 60, textAlign: 'center' }}>Chargement…</div>}>
           <Routes>
@@ -113,6 +125,7 @@ const AppContent = () => {
           </Routes>
           </Suspense>
         </div>
+      </ClerkAxiosSetup>
       </ToastProvider>
     </ThemeProvider>
   );
