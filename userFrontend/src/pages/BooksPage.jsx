@@ -68,7 +68,7 @@ const BooksPage = () => {
 
   const handleDownload = async (book) => {
     try {
-      const token = getToken();
+      const token = await refreshToken();
       const res = await fetch(`${API_BASE_URL}/api/books/download/${book._id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -163,13 +163,37 @@ const BooksPage = () => {
                   onClick={() => setOpenBook(null)}>✕ Fermer</button>
               </div>
             </div>
-            <iframe src={`${API_BASE_URL}/api/books/file/${openBook._id}`}
-              title={openBook.title} style={{ flex: 1, border: 'none', width: '100%' }} />
+            <BookPreview bookId={openBook._id} title={openBook.title} />
           </div>
         </div>
       )}
     </div>
   );
+};
+
+const BookPreview = ({ bookId, title }) => {
+  const [src, setSrc] = useState(null);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await refreshToken();
+        const res = await fetch(`${API_BASE_URL}/api/books/file/${bookId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error('Load failed');
+        const blob = await res.blob();
+        if (!cancelled) setSrc(URL.createObjectURL(blob));
+      } catch {
+        if (!cancelled) setError(true);
+      }
+    })();
+    return () => { cancelled = true; if (src) URL.revokeObjectURL(src); };
+  }, [bookId]);
+  if (error) return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e74c3c' }}>Échec du chargement du fichier</div>;
+  if (!src) return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Chargement…</div>;
+  return <iframe src={src} title={title} style={{ flex: 1, border: 'none', width: '100%' }} />;
 };
 
 export default BooksPage;

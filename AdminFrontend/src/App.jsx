@@ -50,9 +50,12 @@ const ClerkAxiosSetup = ({ children }) => {
       if (aborted) return;
       if (token) {
         setToken(token);
+        getTokenRef.current().then((t) => { if (t) setToken(t); }).catch(() => {});
         setReady(true);
       } else if (!isSignedIn) {
         setReady(true);
+      } else {
+        setTimeout(() => setReady(true), 100);
       }
     })();
     const interceptor = axios.interceptors.request.use(async (config) => {
@@ -65,9 +68,8 @@ const ClerkAxiosSetup = ({ children }) => {
     });
     const refreshInterval = setInterval(async () => {
       if (aborted) return;
-      const token = await getTokenRef.current();
-      if (token) setToken(token);
-    }, 5 * 60 * 1000);
+      getTokenRef.current().then((token) => { if (token) setToken(token); }).catch(() => {});
+    }, 30 * 1000);
     return () => {
       aborted = true;
       axios.interceptors.request.eject(interceptor);

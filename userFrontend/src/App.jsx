@@ -57,6 +57,8 @@ const ClerkAxiosSetup = ({ children }) => {
         setReady(true);
       } else if (!isSignedIn) {
         setReady(true);
+      } else {
+        setTimeout(() => setReady(true), 100);
       }
     })();
     const interceptor = axios.interceptors.request.use(async (config) => {

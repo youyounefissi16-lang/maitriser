@@ -82,7 +82,7 @@ router.post('/import-modules-csv', requireAdmin, upload.single('file'), catchAsy
     });
   } catch (err) {
     if (filePath) try { fs.unlinkSync(filePath); } catch { /* best-effort cleanup */ }
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Import failed' });
   }
 }));
 

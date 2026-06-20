@@ -55,7 +55,7 @@ router.post('/books/upload', requireAdmin, upload.single('file'), catchAsync(asy
     res.status(201).json(book);
   } catch (err) {
     if (req.file) fs.unlinkSync(req.file.path);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Upload failed' });
   }
 }));
 
