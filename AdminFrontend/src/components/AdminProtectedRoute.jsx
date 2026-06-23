@@ -8,7 +8,7 @@ import { setToken } from '../utils/tokenStore';
 const AdminProtectedRoute = () => {
   const { isSignedIn, isLoaded, getToken } = useAuth();
   const [synced, setSynced] = useState(false);
-  const [role, setRole] = useState(localStorage.getItem('adminRole'));
+  const [role, setRole] = useState(() => { try { return localStorage.getItem('adminRole'); } catch { return null; } });
 
   useEffect(() => {
     if (!isSignedIn || !isLoaded || synced) return;
@@ -47,7 +47,7 @@ const AdminProtectedRoute = () => {
     };
     sync();
     return () => { aborted = true; };
-  }, [isSignedIn, isLoaded, getToken]);
+  }, [isSignedIn, isLoaded]);
 
   if (!isLoaded) return <div style={{ padding: 24 }}>Vérification…</div>;
   if (!isSignedIn) return <Navigate to="/logging" replace />;

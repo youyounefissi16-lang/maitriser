@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from "@clerk/react";
 import { authFetch } from '../config/authFetch';
+import { logger } from '../utils/logger';
 
 const AdminProfile = () => {
   const navigate = useNavigate();
@@ -14,7 +15,8 @@ const AdminProfile = () => {
 
   const adminName = user?.fullName || user?.emailAddresses?.[0]?.emailAddress?.split('@')[0] || 'Admin';
   const adminEmail = user?.emailAddresses?.[0]?.emailAddress || '—';
-  const adminRole = localStorage.getItem('adminRole') || '—';
+  let adminRole = '—';
+  try { adminRole = localStorage.getItem('adminRole') || '—'; } catch { /* ignore */ }
   const adminId = user?.id || '—';
 
   const handleChangePassword = async (e) => {
@@ -29,12 +31,13 @@ const AdminProfile = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
-      const data = await res.json();
-      if (!res.ok) { setPwError(data.message); return; }
+      const data = res.ok ? await res.json() : null;
+      if (!res.ok) { setPwError(data?.message || 'Error'); return; }
       setPwMsg('Mot de passe modifié avec succès.');
       setCurrentPassword('');
       setNewPassword('');
-    } catch {
+    } catch (err) {
+      logger.error({ err }, 'AdminProfile changePassword failed');
       setPwError('Erreur lors du changement de mot de passe.');
     } finally {
       setPwLoading(false);

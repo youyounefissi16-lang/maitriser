@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { API_BASE_URL, fetchWithAuth } from '../config/api';
+import { logger } from '../utils/logger';
 import '../styles/teal-theme.css';
 
 const Recorder = ({ onAudioReady, onTranscript }) => {
@@ -24,7 +25,6 @@ const Recorder = ({ onAudioReady, onTranscript }) => {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
       const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: mime });
 
@@ -85,7 +85,8 @@ const Recorder = ({ onAudioReady, onTranscript }) => {
       } else {
         setUnsupported(true);
       }
-    } catch {
+    } catch (err) {
+      logger.error({ err }, 'VoiceExam mic access denied');
       setError('Accès au micro refusé.');
     }
   };
@@ -151,8 +152,10 @@ const Recorder = ({ onAudioReady, onTranscript }) => {
 };
 
 const VoiceExam = ({ exam, onBack }) => {
+  if (!exam) return <div className="page-teal"><div className="card-teal" style={{ textAlign: 'center' }}>Examen introuvable.</div></div>;
+  const questions = exam.questions || [];
   const STORAGE_KEY = `voice-exam-${exam._id}`;
-  const [answers, setAnswers]     = useState(() => exam.questions.map(() => ({ text: '' })));
+  const [answers, setAnswers]     = useState(() => (questions).map(() => ({ text: '' })));
   const [result, setResult]       = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]         = useState('');
@@ -165,12 +168,12 @@ const VoiceExam = ({ exam, onBack }) => {
       if (savedRaw) {
         const saved = JSON.parse(savedRaw);
         if (saved.examId === exam._id && !saved.result) {
-          setAnswers(saved.answers || exam.questions.map(() => ({ text: '' })));
+          setAnswers(saved.answers || questions.map(() => ({ text: '' })));
           return;
         }
       }
     } catch { /* ignore */ }
-    setAnswers(exam.questions.map(() => ({ text: '' })));
+    setAnswers(questions.map(() => ({ text: '' })));
     setResult(null);
     setError('');
     try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
@@ -208,11 +211,12 @@ const VoiceExam = ({ exam, onBack }) => {
         method: 'POST',
         body,
       });
+      if (!res.ok) throw new Error('Submission failed');
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Submission failed');
       clearSaved();
       setResult(data);
     } catch (err) {
+      logger.error({ err, examId: exam?._id }, 'VoiceExam submit failed');
       setError(err.message);
     } finally {
       setSubmitting(false);
@@ -237,7 +241,7 @@ const VoiceExam = ({ exam, onBack }) => {
         {exam.images && exam.images.length > 0 && (
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             {exam.images.map((img, i) => (
-              <img key={i} src={`${API_BASE_URL}/api/voice-exam-images/${img}`} alt={`Image ${i + 1}`}
+              <img key={i} src={`${API_BASE_URL}/api/voice-exam-images/${img}`} alt={`Image ${i + 1}`} loading="lazy"
                 style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, objectFit: 'contain', border: '1px solid #ddd' }}
               />
             ))}
@@ -245,7 +249,7 @@ const VoiceExam = ({ exam, onBack }) => {
         )}
       </div>
 
-      {!result && exam.questions.map((q, qi) => (
+      {!result && questions.map((q, qi) => (
         <div key={qi} className="voice-exam-question" style={{ marginBottom: 16, padding: 14, background: '#fff', borderRadius: 8, border: '1px solid #e0e0e0' }}>
           <p style={{ fontWeight: 600, margin: '0 0 8px' }}>Q{qi + 1}. {q.questionText}</p>
           <Recorder onTranscript={(text) => setAnswer(qi, text)} />
@@ -284,7 +288,7 @@ const VoiceExam = ({ exam, onBack }) => {
             </span>
           </div>
 
-          {exam.questions.map((q, qi) => {
+          {questions.map((q, qi) => {
             const a = result.answers?.[qi];
             if (!a) return null;
             return (
@@ -323,7 +327,7 @@ const VoiceExam = ({ exam, onBack }) => {
 
           <button
             type="button"
-            onClick={() => { setResult(null); setAnswers(exam.questions.map(() => ({ text: '' }))); setError(''); }}
+            onClick={() => { setResult(null); setAnswers(questions.map(() => ({ text: '' }))); setError(''); }}
             style={{ padding: '10px 24px', borderRadius: 6, border: '1px solid #ccc', background: '#fff', cursor: 'pointer', fontWeight: 600 }}
           >
             Réessayer

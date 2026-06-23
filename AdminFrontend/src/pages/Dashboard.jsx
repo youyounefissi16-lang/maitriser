@@ -3,6 +3,8 @@ import { authFetch } from '../config/authFetch';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import Spinner from '../components/Spinner';
+import { useAdminWS } from '../hooks/useAdminWS';
+import { logger } from '../utils/logger';
 import '../styles/Dashboard.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -18,6 +20,7 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { lastEvent, connected } = useAdminWS();
 
   const fetchDashboardStats = async () => {
     setLoading(true);
@@ -27,6 +30,7 @@ const Dashboard = () => {
       if (!response.ok) throw new Error("Failed to fetch dashboard stats");
       setStats(await response.json());
     } catch (error) {
+      logger.error({ err: error }, 'Dashboard fetchDashboardStats failed');
       setError("Failed to load data. Please try again.");
     } finally {
       setLoading(false);
@@ -34,6 +38,12 @@ const Dashboard = () => {
   };
 
   useEffect(() => { fetchDashboardStats(); }, []);
+
+  useEffect(() => {
+    if (lastEvent && ['quiz:submitted', 'user:signedUp', 'contact:new'].includes(lastEvent.type)) {
+      fetchDashboardStats();
+    }
+  }, [lastEvent]);
 
   if (loading) return <div className="dashboard"><Spinner text="Loading dashboard..." /></div>;
 
@@ -51,7 +61,7 @@ const Dashboard = () => {
     labels: ['Users', 'Quizzes', 'Modules', 'Cases', 'Voice Exams', 'Books', 'Contacts'],
     datasets: [{
       label: 'Count',
-      data: [stats.users, stats.quizzes, stats.modules, stats.cases, stats.voiceExams, stats.books, stats.contacts],
+      data: [stats?.users ?? 0, stats?.quizzes ?? 0, stats?.modules ?? 0, stats?.cases ?? 0, stats?.voiceExams ?? 0, stats?.books ?? 0, stats?.contacts ?? 0],
       backgroundColor: [
         'rgba(0, 123, 255, 0.6)', 'rgba(40, 167, 69, 0.6)', 'rgba(255, 193, 7, 0.6)',
         'rgba(111, 66, 193, 0.6)', 'rgba(23, 162, 184, 0.6)', 'rgba(253, 126, 20, 0.6)',
@@ -70,7 +80,7 @@ const Dashboard = () => {
     labels: ['Pass Rate'],
     datasets: [{
       label: '%',
-      data: [stats.passRate],
+      data: [stats?.passRate ?? 0],
       backgroundColor: ['rgba(0, 123, 255, 0.6)'],
       borderColor: ['rgba(0, 123, 255, 1)'],
       borderWidth: 1,
@@ -79,26 +89,33 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard">
-      <h2>Dashboard</h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <h2 style={{ margin: 0 }}>Dashboard</h2>
+        <span style={{
+          display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
+          background: connected ? '#27ae60' : '#e74c3c',
+          transition: 'background 0.3s',
+        }} title={connected ? 'Live' : 'Reconnecting...'} />
+      </div>
 
       <h3 style={{ margin: '20px 0 10px', fontSize: 14, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>Utilisateurs & Examens</h3>
       <div className="stats-container">
-        <StatCard label="Users" value={stats.users} />
-        <StatCard label="Quiz Attempts" value={stats.attempts} />
-        <StatCard label="Voice Results" value={stats.voiceResults} />
-        <StatCard label="Pass Rate" value={`${stats.passRate}%`} />
+        <StatCard label="Users" value={stats?.users ?? 0} />
+        <StatCard label="Quiz Attempts" value={stats?.attempts ?? 0} />
+        <StatCard label="Voice Results" value={stats?.voiceResults ?? 0} />
+        <StatCard label="Pass Rate" value={`${stats?.passRate ?? 0}%`} />
       </div>
 
       <h3 style={{ margin: '20px 0 10px', fontSize: 14, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>Contenu</h3>
       <div className="stats-container">
-        <StatCard label="Quizzes" value={stats.quizzes} />
-        <StatCard label="Drafts" value={stats.drafts} />
-        <StatCard label="Published" value={stats.published} />
-        <StatCard label="Modules" value={stats.modules} />
-        <StatCard label="Cases" value={stats.cases} />
-        <StatCard label="Voice Exams" value={stats.voiceExams} />
-        <StatCard label="Books" value={stats.books} />
-        <StatCard label="Messages" value={stats.contacts} />
+        <StatCard label="Quizzes" value={stats?.quizzes ?? 0} />
+        <StatCard label="Drafts" value={stats?.drafts ?? 0} />
+        <StatCard label="Published" value={stats?.published ?? 0} />
+        <StatCard label="Modules" value={stats?.modules ?? 0} />
+        <StatCard label="Cases" value={stats?.cases ?? 0} />
+        <StatCard label="Voice Exams" value={stats?.voiceExams ?? 0} />
+        <StatCard label="Books" value={stats?.books ?? 0} />
+        <StatCard label="Messages" value={stats?.contacts ?? 0} />
       </div>
 
       <div className="chart-section">

@@ -4,7 +4,7 @@ const modalBtn = {
   flex: 1, padding: 10, borderRadius: 6, cursor: 'pointer', fontWeight: 600,
 };
 
-const ConfirmModal = ({ open, title, message, onConfirm, onCancel, confirmText = 'Confirm', cancelText = 'Cancel' }) => {
+const ConfirmModal = ({ open, title, message, onConfirm, onCancel, confirmText = 'Confirm', cancelText = 'Cancel', confirmDisabled = false }) => {
   if (!open) return null;
 
   return (
@@ -15,11 +15,11 @@ const ConfirmModal = ({ open, title, message, onConfirm, onCancel, confirmText =
         <p style={{ textAlign: 'center', color: 'var(--dc-text)', marginBottom: 20 }}>{message}</p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button onClick={onCancel} style={{ ...modalBtn, border: '1px solid var(--dc-border)', background: 'var(--dc-cream)', color: 'var(--dc-text)' }}>{cancelText}</button>
-          <button onClick={onConfirm} style={{ ...modalBtn, border: 'none', background: 'var(--dc-highlight)', color: '#fff' }}>{confirmText}</button>
+          <button onClick={onConfirm} disabled={confirmDisabled} style={{ ...modalBtn, border: 'none', background: 'var(--dc-highlight)', color: '#fff' }}>{confirmText}</button>
         </div>
       </div>
     </div>
   );
 };
 
-export default ConfirmModal;
+export default React.memo(ConfirmModal);

@@ -1,22 +1,31 @@
 import express from 'express';
-import { body, validationResult } from 'express-validator';
+import { body } from 'express-validator';
 import crypto from 'crypto';
 import User from '../models/userModel.js';
 import { sendEmail, verificationEmailHtml, resetPasswordHtml } from '../utils/email.js';
 import logger from '../utils/logger.js';
+import { validate } from '../middleware/validate.js';
+
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174')
+  .split(',').map((o) => o.trim());
+
+const allowedHosts = ALLOWED_ORIGINS.map((o) => { try { return new URL(o).host; } catch { return null; } }).filter(Boolean);
+
+const safeBaseUrl = (req) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) return origin;
+  const host = req.get('host');
+  if (host && allowedHosts.includes(host)) return `${req.protocol}://${host}`;
+  return `${req.protocol}://${allowedHosts[0] || 'localhost:5173'}`;
+};
 
 const router = express.Router();
-const handleValidation = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
-  next();
-};
 
 // POST /api/auth/send-verification — send verification email to existing unverified user
 router.post(
   '/send-verification',
   [body('email').isEmail().normalizeEmail()],
-  handleValidation,
+  validate,
   async (req, res) => {
     try {
       const { email } = req.body;
@@ -29,8 +38,7 @@ router.post(
       user.verificationExpiry = new Date(Date.now() + 3600000); // 1 hour
       await user.save();
 
-      const baseUrl = req.headers.origin || `${req.protocol}://${req.get('host')}`;
-      const sent = await sendEmail({ to: email, subject: 'Verify your email', html: verificationEmailHtml(token, baseUrl) });
+      const sent = await sendEmail({ to: email, subject: 'Verify your email', html: verificationEmailHtml(token, safeBaseUrl(req)) });
       if (!sent) return res.status(500).json({ message: 'Failed to send verification email. Check SMTP configuration.' });
 
       res.json({ message: 'Verification email sent' });
@@ -45,7 +53,7 @@ router.post(
 router.post(
   '/verify-email',
   [body('token').notEmpty()],
-  handleValidation,
+  validate,
   async (req, res) => {
     try {
       const { token } = req.body;
@@ -72,7 +80,7 @@ router.post(
 router.post(
   '/forgot-password',
   [body('email').isEmail().normalizeEmail()],
-  handleValidation,
+  validate,
   async (req, res) => {
     try {
       const { email } = req.body;
@@ -84,8 +92,7 @@ router.post(
       user.resetExpiry = new Date(Date.now() + 3600000); // 1 hour
       await user.save();
 
-      const baseUrl = req.headers.origin || `${req.protocol}://${req.get('host')}`;
-      const sent = await sendEmail({ to: email, subject: 'Reset your password', html: resetPasswordHtml(token, baseUrl) });
+      const sent = await sendEmail({ to: email, subject: 'Reset your password', html: resetPasswordHtml(token, safeBaseUrl(req)) });
       if (!sent) {
         return res.status(500).json({ message: 'Failed to send reset email. Check SMTP configuration.' });
       }
@@ -105,7 +112,7 @@ router.post(
     body('token').notEmpty(),
     body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   ],
-  handleValidation,
+  validate,
   async (req, res) => {
     try {
       const { token, password } = req.body;

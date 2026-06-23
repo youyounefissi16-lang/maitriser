@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import { httpLogger } from './utils/logger.js';
+import { httpLogger, logger } from './utils/logger.js';
 import rateLimit from 'express-rate-limit';
 import userRoutes from './routes/userRoutes.js';
 import moduleRoutes from './routes/moduleRoutes.js';
@@ -26,26 +26,40 @@ const app = express();
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174')
   .split(',').map((o) => o.trim());
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  hsts: process.env.NODE_ENV === 'production' ? { maxAge: 63072000, includeSubDomains: true, preload: true } : false,
+}));
 app.use(compression());
 app.use(httpLogger);
 
-// Private Network Access header — must be before cors so it's set on preflight OPTIONS responses
+// Block non-browser (no Origin) unsafe methods before CORS + Private Network Access header
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  if (!req.headers.origin && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return res.status(403).json({ message: 'Origin header required for this method' });
+  }
   next();
 });
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.some((o) => origin.startsWith(o))) {
-      callback(null, true);
-    } else {
-      callback(null, false);
-    }
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    try {
+      const u = new URL(origin);
+      if (u.hostname.endsWith('.ngrok-free.dev') || u.hostname.endsWith('.ngrok.io'))
+        return callback(null, true);
+    } catch {}
+    callback(null, false);
   },
   credentials: true,
 }));
+
+// Catch-all OPTIONS: handle preflight for rejected origins (cors ends response for allowed origins, rejected origins fall through)
+app.options('*', (req, res) => res.status(204).end());
 
 app.use(express.json({ limit: '1mb' }));
 
@@ -70,7 +84,7 @@ const contactLimiter = rateLimit({
   message: { message: 'Too many messages, please try again later.' },
 });
 
-app.use(['/api/users/login', '/api/users/register', '/api/user/logging', '/api/user/register'], authLimiter);
+app.use(['/api/users/login', '/api/users/register', '/api/user/logging', '/api/user/register', '/api/admin/claim'], authLimiter);
 app.use(['/api/quizzes', '/api/voice-exams'], (req, res, next) => {
   if (req.method === 'POST' && /\/(submit|grade)$/.test(req.path)) return submitLimiter(req, res, next);
   next();
@@ -78,6 +92,12 @@ app.use(['/api/quizzes', '/api/voice-exams'], (req, res, next) => {
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+const userLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 60,
+  keyGenerator: (req) => req.user?.userId || req.ip,
+  message: { message: 'Too many requests, slow down.' },
 });
 
 app.use('/api/user', sinupRoute);
@@ -88,18 +108,21 @@ app.use('/api/auth', emailAuthRoutes);
 app.use('/api/auth', clerkRoutes);
 app.use('/api', adminRoutes);
 
-app.use('/api', verifyToken, quizRoutes);
-app.use('/api', verifyToken, quizResultRoutes);
-app.use('/api', verifyToken, bookRoutes);
-app.use('/api', verifyToken, voiceExamRoutes);
-app.use('/api', verifyToken, moduleRoutes);
-app.use('/api', verifyToken, bookmarkRoutes);
+app.use('/api', verifyToken, userLimiter, quizRoutes);
+app.use('/api', verifyToken, userLimiter, quizResultRoutes);
+app.use('/api', verifyToken, userLimiter, bookRoutes);
+app.use('/api', verifyToken, userLimiter, voiceExamRoutes);
+app.use('/api', verifyToken, userLimiter, moduleRoutes);
+app.use('/api', verifyToken, userLimiter, bookmarkRoutes);
+
+app.use('/api', verifyToken, requireAdmin, userRoutes);
+app.use('/api', verifyToken, requireAdmin, dashboardRoutes);
 
 app.use('/api', verifyToken, requireAdmin, userRoutes);
 app.use('/api', verifyToken, requireAdmin, dashboardRoutes);
 
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
+  logger.error({ err, url: req.originalUrl, method: req.method }, 'Unhandled error');
   res.status(err.status || 500).json({ message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message || 'Internal server error' });
 });
 

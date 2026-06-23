@@ -3,12 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { useToast } from '../components/Toast';
 import { SkeletonQuizItem } from '../components/LoadingSkeleton';
+import { useTranslation } from '../context/LanguageContext';
+import { logger } from '../utils/logger';
+import { useSound } from '../context/SoundContext';
 import '../styles/teal-theme.css';
 
 const CaseExam = () => {
   const { caseId } = useParams();
   const navigate = useNavigate();
   const notify = useToast();
+  const play = useSound();
+  const { t } = useTranslation();
 
   const [caseData, setCaseData] = useState(null);
   const [quizzes, setQuizzes] = useState([]);
@@ -57,13 +62,14 @@ const CaseExam = () => {
     (async () => {
       try {
         const res = await fetchWithAuth(`${API_BASE_URL}/api/cases/${caseId}`, { signal: controller.signal });
-        if (!res.ok) throw new Error('Cas clinique introuvable');
+        if (!res.ok) throw new Error(t('quizcase.notFound') || 'Case not found');
         const data = await res.json();
         if (controller.signal.aborted) return;
         setCaseData(data.case);
-        setQuizzes(data.quizzes.filter((q) => q.question?.questionText));
+        setQuizzes((data.quizzes || []).filter((q) => q.question?.questionText));
       } catch (err) {
         if (err.name === 'AbortError') return;
+        logger.error({ err, caseId }, 'CaseExam fetch failed');
         setError(err.message);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -78,86 +84,101 @@ const CaseExam = () => {
 
   const toggleOption = (opt) => {
     if (isSubmitted) return;
+    play('select');
     setSelected((prev) => prev.includes(opt) ? prev.filter((a) => a !== opt) : [...prev, opt]);
   };
 
   const handleSubmit = async () => {
-    if (!current || selected.length === 0) return notify('Sélectionnez au moins une réponse.', 'warning');
+    play('submit');
+    if (!current || selected.length === 0) return notify(t('quizcard.warning.select'), 'warning');
     setSubmitting(true);
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/api/quizzes/${current._id}/submit`, {
         method: 'POST',
         body: { selectedAnswers: selected },
       });
+      if (!res.ok) throw new Error(t('quizcard.error.submit') || 'Submit failed');
       const data = await res.json();
       const newResults = { ...results, [current._id]: data };
       setResults(newResults);
       if (quizzes.every((q) => newResults[q._id] !== undefined)) clearSaved();
-    } catch {
-      notify('Erreur de soumission.', 'error');
+    } catch (err) {
+      logger.error({ err, quizId: current?._id }, 'CaseExam submit failed');
+      notify(t('quizcard.error.submitRetry'), 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
   if (loading) return <div className="page-teal"><div className="card-teal"><SkeletonQuizItem count={3} /></div></div>;
-  if (error) return <div className="page-teal"><div className="card-teal" style={{ textAlign: 'center', color: '#e74c3c' }}><p>{error}</p><button className="btn-primary" onClick={() => navigate('/quizPage')} style={{ marginTop: '12px' }}>Retour</button></div></div>;
-  if (!quizzes.length) return <div className="page-teal"><div className="card-teal" style={{ textAlign: 'center' }}><p>Aucun QCM pour ce cas.</p><button className="btn-dark" onClick={() => navigate('/quizPage')}>Retour</button></div></div>;
+  if (error) return (
+    <div className="page-teal">
+      <div className="card-teal case-exam-error">
+        <p>{error}</p>
+        <button className="btn-primary" onClick={() => { play('prev'); navigate('/quizPage'); }}>
+          {t('quizcard.back')}
+        </button>
+      </div>
+    </div>
+  );
+  if (!quizzes.length) return (
+    <div className="page-teal">
+      <div className="card-teal case-exam-empty">
+        <p>{t('quiz.noQuizzes')}</p>
+        <button className="btn-dark" onClick={() => { play('prev'); navigate('/quizPage'); }}>
+          {t('quizcard.back')}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="page-teal">
-      <div className="card-teal" style={{ maxWidth: '800px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0, fontSize: '20px' }}>📋 {caseData.title}</h2>
-          {allDone && <span style={{ background: '#d4edda', color: '#155724', padding: '4px 12px', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 700 }}>✅ Terminé</span>}
+      <div className="card-teal case-exam-container">
+        <div className="case-exam-header">
+          <h2 className="case-exam-title">{caseData?.title}</h2>
+          {allDone && <span className="case-exam-badge-done">{t('quizcase.done')}</span>}
         </div>
 
-        <div style={{
-          background: '#e3f2fd', border: '1px solid #bbdefb', borderRadius: '10px',
-          padding: '16px', marginBottom: '20px',
-        }}>
-          <p style={{ margin: 0, fontSize: '14px', color: '#1a237e', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{caseData.description}</p>
+        <div className="case-exam-description">
+          <p>{caseData?.description}</p>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <span style={{ fontWeight: 700, fontSize: '14px', color: '#555' }}>
-            Question {currentIndex + 1} / {quizzes.length}
+        <div className="case-exam-nav-row">
+          <span className="case-exam-counter">
+            {t('mock.question')} {currentIndex + 1} / {quizzes.length}
           </span>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="case-exam-dots">
             {quizzes.map((q, i) => (
-              <button key={q._id} onClick={() => setCurrentIndex(i)} style={{
-                width: '28px', height: '28px', borderRadius: '50%', border: '2px solid',
-                borderColor: i === currentIndex ? 'var(--teal-accent)' : results[q._id] ? '#27ae60' : 'var(--border-light)',
-                background: i === currentIndex ? 'var(--teal-accent)' : results[q._id] ? '#d4edda' : '#fff',
-                color: i === currentIndex ? '#fff' : results[q._id] ? '#155724' : '#888',
-                fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer',
-              }}>{i + 1}</button>
+              <button key={q._id} onClick={() => setCurrentIndex(i)}
+                className={`case-dot ${i === currentIndex ? 'active' : ''} ${results[q._id] ? 'done' : ''}`}>
+                {i + 1}
+              </button>
             ))}
           </div>
         </div>
 
-        <div className="exam-progress-bar" style={{ marginBottom: '24px' }}>
+        <div className="exam-progress-bar">
           <div className="exam-progress-fill" style={{ width: `${((Object.keys(results).length) / quizzes.length) * 100}%` }} />
         </div>
 
         <div key={current._id}>
-          <p style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: '16px', color: 'var(--text-dark)' }}>
+          <p className="case-exam-question">
             {current.question.questionText}
           </p>
 
           {current.question.options.map((opt, i) => {
-            let bg = '#f9f9f9';
-            let borderColor = '#e8e8e8';
+            let variant = 'default';
             if (isSubmitted) {
-              if (results[current._id]?.correctAnswers?.includes(opt)) { bg = '#d4edda'; borderColor = '#c3e6cb'; }
-              else if (selected.includes(opt)) { bg = '#f8d7da'; borderColor = '#f5c6cb'; }
+              if (results[current._id]?.correctAnswers?.includes(opt)) variant = 'correct';
+              else if (selected.includes(opt)) variant = 'incorrect';
             } else if (selected.includes(opt)) {
-              bg = '#e3f2fd'; borderColor = '#14a3a8';
+              variant = 'selected';
             }
             return (
-              <label key={i} className="option-label"
+              <label key={i} className={`option-label ${variant}`}
                 onClick={() => toggleOption(opt)}
-                style={{ background: bg, borderColor, cursor: isSubmitted ? 'default' : 'pointer' }}>
+                style={{ cursor: isSubmitted ? 'default' : 'pointer' }}>
                 <input type="checkbox" checked={selected.includes(opt)} onChange={() => toggleOption(opt)} disabled={isSubmitted} />
                 {opt}
               </label>
@@ -165,43 +186,45 @@ const CaseExam = () => {
           })}
 
           {isSubmitted && (
-            <div style={{
-              marginTop: '16px', padding: '14px', borderRadius: '10px',
-              background: results[current._id].correct ? '#d4edda' : '#f8d7da',
-              border: `1px solid ${results[current._id].correct ? '#c3e6cb' : '#f5c6cb'}`,
-            }}>
-              <p style={{ fontWeight: 'bold', fontSize: '15px', margin: '0 0 4px', color: '#111' }}>
-                {results[current._id].correct ? '✅ Correct' : '❌ Faux'}
+            <div className={`case-result-box ${results[current._id].correct ? 'correct' : 'incorrect'}`}>
+              <p className="case-result-label">
+                {results[current._id].correct ? t('mock.correct') : t('mock.incorrect')}
               </p>
               {!results[current._id].correct && (
-                <p style={{ fontSize: '13px', color: '#555', margin: '0' }}>
-                  <strong>Réponse{results[current._id].correctAnswers?.length > 1 ? 's' : ''} correcte{results[current._id].correctAnswers?.length > 1 ? 's' : ''} :</strong>{' '}
+                <p className="case-result-answers">
+                  <strong>{results[current._id].correctAnswers?.length > 1 ? t('mock.correctAnswers') : t('mock.correctAnswer')} :</strong>{' '}
                   {results[current._id].correctAnswers?.join(', ')}
                 </p>
               )}
               {results[current._id].explanation && (
-                <div style={{ marginTop: '8px', padding: '10px', background: 'rgba(255,255,255,0.7)', borderRadius: '8px', fontSize: '13px', color: '#333' }}>
-                  <strong>💡</strong> {results[current._id].explanation}
+                <div className="explanation-box">
+                  {results[current._id].explanation}
                 </div>
               )}
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+          <div className="case-exam-footer">
             <div>
               {currentIndex > 0 && (
-                <button className="btn-dark" onClick={() => setCurrentIndex((i) => i - 1)}>← Précédent</button>
+                <button className="btn-dark" onClick={() => { play('prev'); setCurrentIndex((i) => i - 1); }}>
+                  {t('mock.prev')}
+                </button>
               )}
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="case-exam-actions">
               {!isSubmitted ? (
                 <button className="btn-primary" onClick={handleSubmit} disabled={submitting || selected.length === 0}>
-                  {submitting ? 'Soumission…' : 'Soumettre'}
+                  {submitting ? t('mock.submitting') : t('mock.submit')}
                 </button>
               ) : currentIndex < quizzes.length - 1 ? (
-                <button className="btn-primary" onClick={() => setCurrentIndex((i) => i + 1)}>Suivant →</button>
+                <button className="btn-primary" onClick={() => { play('next'); setCurrentIndex((i) => i + 1); }}>
+                  {t('mock.next')}
+                </button>
               ) : (
-                <button className="btn-dark" onClick={() => navigate('/quizPage')}>Retour aux QCM</button>
+                <button className="btn-dark" onClick={() => { play('prev'); navigate('/quizPage'); }}>
+                  {t('quizcard.back')}
+                </button>
               )}
             </div>
           </div>

@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { SkeletonQuizItem } from '../components/LoadingSkeleton';
 import Pagination from '../components/Pagination';
+import { logger } from '../utils/logger';
+import { useTranslation } from '../context/LanguageContext';
 import '../styles/teal-theme.css';
 
 const ResultPage = () => {
@@ -11,9 +13,12 @@ const ResultPage = () => {
   const [page, setPage]         = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => { document.title = 'Mes Résultats — QuizApp'; }, []);
+  const { t } = useTranslation();
 
-  const userId = localStorage.getItem('userId');
+  useEffect(() => { document.title = `${t('nav.results')} — MAITRISEZ`; }, []);
+
+  let userId;
+  try { userId = localStorage.getItem('userId'); } catch { userId = null; }
 
   const fetchResults = useCallback(async (signal) => {
     const pg = signal instanceof AbortSignal ? 1 : signal ?? 1;
@@ -24,6 +29,7 @@ const ResultPage = () => {
       const res = await fetchWithAuth(`${API_BASE_URL}/api/results/${userId}?page=${pg}&limit=50`, {
         signal: signal instanceof AbortSignal ? signal : undefined,
       });
+      if (!res.ok) throw new Error('Failed to load results');
       const d = await res.json();
       if (signal instanceof AbortSignal && signal.aborted) return;
       setResults(d.data || (Array.isArray(d) ? d : []));
@@ -31,6 +37,7 @@ const ResultPage = () => {
       setTotalPages(d.pages || 1);
     } catch (err) {
       if (err.name === 'AbortError') return;
+      logger.error({ err }, 'ResultPage fetchResults failed');
       setError(err.message);
     } finally {
       if (!(signal instanceof AbortSignal) || !signal.aborted) setLoading(false);
@@ -44,7 +51,7 @@ const ResultPage = () => {
   }, [userId]);
 
   if (loading) return <div className="page-teal"><div className="card-teal"><SkeletonQuizItem count={4} /></div></div>;
-  if (error)   return <div className="page-teal"><div className="card-teal" style={{ textAlign: 'center', color: '#e74c3c' }}><p>Erreur : {error}</p><button type="button" className="btn-primary" onClick={() => fetchResults(1)} style={{ marginTop: '12px' }}>Réessayer</button></div></div>;
+  if (error)   return <div className="page-teal"><div className="card-teal" style={{ textAlign: 'center', color: '#e74c3c' }}><p>{t('error')} : {error}</p><button type="button" className="btn-primary" onClick={() => fetchResults(1)} style={{ marginTop: '12px' }}>{t('quiz.retry')}</button></div></div>;
 
   const total = results.length;
   const correct = results.filter((r) => r.score === 1).length;
@@ -65,7 +72,7 @@ const ResultPage = () => {
   return (
     <div className="page-teal">
       <div className="card-teal" style={{ maxWidth: '800px' }}>
-        <h2>📊 Mes Résultats</h2>
+        <h2>📊 {t('nav.results')}</h2>
 
         {total > 0 && (
           <div style={{ marginBottom: '24px', padding: '20px', background: '#f0fbfc', borderRadius: '14px', textAlign: 'center' }}>
@@ -73,14 +80,14 @@ const ResultPage = () => {
               {percentage}%
             </div>
             <div style={{ fontSize: '14px', color: '#555' }}>
-              {correct} / {total} correctes — {results.length} tentative{results.length > 1 ? 's' : ''}
+              {correct} / {total} {t('mock.correct').toLowerCase()} — {results.length} attempt{results.length > 1 ? 's' : ''}
             </div>
           </div>
         )}
 
         {Object.keys(moduleStats).length > 0 && (
           <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>📈 Performance par module</h3>
+            <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>📈 {t('dashboard.modulePerformance') || 'Performance by Module'}</h3>
             <div className="exam-results-list">
               {Object.entries(moduleStats).map(([key, stat]) => {
                 const pct = stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0;
@@ -100,7 +107,7 @@ const ResultPage = () => {
           </div>
         )}
 
-        <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>Historique détaillé</h3>
+        <h3 style={{ fontSize: '16px', marginBottom: '12px' }}>{t('dashboard.detailedHistory') || 'Detailed History'}</h3>
         {results.length === 0 ? (
           <div className="empty-state">
             <p>Aucune tentative de QCM pour le moment.</p>

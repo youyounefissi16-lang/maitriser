@@ -6,9 +6,9 @@ const AboutPage = () => {
   return (
     <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="card-teal" style={{ maxWidth: '720px' }}>
-        <h1 className="about-heading">À propos de Quiz App</h1>
+        <h1 className="about-heading">À propos de MAITRISEZ</h1>
         <p className="about-paragraph">
-          Bienvenue sur notre application Quiz ! Cette application est conçue pour rendre l'apprentissage amusant et engageant en testant vos connaissances sur divers sujets. Que vous soyez un étudiant préparant des examens, un passionné de culture générale ou quelqu'un qui aime les défis, notre application Quiz offre une façon interactive d'apprendre et de progresser.
+          Bienvenue sur MAITRISEZ ! Cette plateforme est conçue pour rendre l'apprentissage amusant et engageant en testant vos connaissances sur divers sujets. Que vous soyez un étudiant préparant des examens, un passionné de culture générale ou quelqu'un qui aime les défis, MAITRISEZ offre une façon interactive d'apprendre et de progresser.
         </p>
         <h3 className="features-heading">Fonctionnalités principales :</h3>
         <ul className="features-list">

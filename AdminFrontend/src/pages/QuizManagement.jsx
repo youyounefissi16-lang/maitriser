@@ -3,9 +3,11 @@ import { authFetch } from '../config/authFetch';
 import { API_BASE_URL } from '../config/api';
 import { FaTrash, FaEdit, FaSave, FaPaperPlane, FaCheckDouble, FaRegCircle, FaCheckCircle } from 'react-icons/fa';
 import { useToast } from '../components/Toast';
+import { useSound } from '../context/SoundContext';
 import ConfirmModal from '../components/ConfirmModal';
 import Spinner from '../components/Spinner';
 import Pagination from '../components/Pagination';
+import { logger } from '../utils/logger';
 import '../styles/QuizManagement.css';
 
 const YEARS = [1, 2, 3, 4, 5, 6, 7];
@@ -38,6 +40,7 @@ const OptionItem = ({ i, opt, onUpdate }) => {
 
 const QuizManagement = () => {
   const notify = useToast();
+  const play = useSound();
   const [modules, setModules]               = useState([]);
   const [filteredModules, setFilteredModules] = useState([]);
   const [quizzes, setQuizzes]               = useState([]);
@@ -58,6 +61,8 @@ const QuizManagement = () => {
   const [bulkDeleteTarget, setBulkDeleteTarget] = useState(null);
   const [bulkProcessing, setBulkProcessing]  = useState(false);
   const [showCaseModal, setShowCaseModal]   = useState(false);
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
   const [creatingCase, setCreatingCase]     = useState(false);
   const emptyQuiz = () => ({ questionText: '', options: ['', '', '', ''], correctIndices: [], explanation: '' });
   const [caseForm, setCaseForm]             = useState({ year: '', moduleId: '', title: '', description: '', quizzes: [emptyQuiz(), emptyQuiz(), emptyQuiz()] });
@@ -77,18 +82,19 @@ const QuizManagement = () => {
     if (mod) setModuleCourses(mod.courses || []);
     else {
       authFetch(`/api/modules`)
-        .then((r) => r.json())
-        .then((all) => { const found = all.find((m) => m._id === form.moduleId); if (found) setModuleCourses(found.courses || []); })
-        .catch(() => {});
+        .then((r) => r.ok ? r.json() : [])
+        .then((all) => { if (Array.isArray(all)) { const found = all.find((m) => m._id === form.moduleId); if (found) setModuleCourses(found.courses || []); } })
+        .catch((err) => { logger.error({ err }, 'QuizManagement moduleCourses fallback fetch failed'); });
     }
   }, [form.moduleId, modules]);
 
   const fetchModules = async () => {
     try {
       const res = await authFetch('/api/modules');
+      if (!res.ok) throw new Error('Failed');
       const data = await res.json();
       setModules(Array.isArray(data) ? data : []);
-    } catch (e) { setModules([]); }
+    } catch (e) { logger.error({ err: e }, 'QuizManagement fetchModules failed'); setModules([]); }
   };
 
   const fetchQuizzes = async (p) => {
@@ -100,12 +106,13 @@ const QuizManagement = () => {
     try {
       setLoading(true);
       const res = await authFetch(url);
+      if (!res.ok) throw new Error('Failed');
       const d = await res.json();
       setQuizzes(d.data || (Array.isArray(d) ? d : []));
       setPage(d.page || 1);
       setTotalPages(d.pages || 1);
       setError('');
-    } catch (e) { setError('Failed to load quizzes'); }
+    } catch (e) { logger.error({ err: e }, 'QuizManagement fetchQuizzes failed'); setError('Failed to load quizzes'); }
     finally { setLoading(false); }
   };
 
@@ -130,6 +137,8 @@ const QuizManagement = () => {
   }, []);
 
   const handleSubmit = async (published) => {
+    play('submit');
+    if (submittingRef.current) return;
     const { quizId, moduleId, course, questionText, options, correctIndices, explanation } = form;
     if (!quizId || !moduleId || !questionText) return notify('Please fill all required fields.', 'warning');
     if (options.some((o) => !o.trim())) return notify('All options must have text.', 'warning');
@@ -139,27 +148,36 @@ const QuizManagement = () => {
     const body = { quizId, moduleId, course: course || '', questionText, options, correctAnswers, explanation, published };
     const url    = editId ? `/api/edit-quiz/${editId}` : '/api/create-quiz';
     const method = editId ? 'PUT' : 'POST';
+    submittingRef.current = true;
+    setSubmitting(true);
 
     try {
       const res = await authFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const data = await res.json();
+      const data = res.ok ? await res.json() : null;
       if (res.ok) { fetchQuizzes(); resetForm(); notify(editId ? 'Quiz updated' : 'Quiz created', 'success'); }
-      else notify(`Error: ${data.message}`, 'error');
+      else notify(`Error: ${data?.message || 'Unknown error'}`, 'error');
     } catch (err) {
+      logger.error({ err }, 'QuizManagement handleSubmit failed');
       notify('Network error', 'error');
-    }
+    } finally { submittingRef.current = false; setSubmitting(false); }
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
+    play('delete');
+    if (!deleteTarget || submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
     try {
       const res = await authFetch(`/api/delete-quiz/${deleteTarget._id}`, { method: 'DELETE' });
       if (res.ok) { fetchQuizzes(); notify('Quiz deleted', 'success'); }
       else notify('Failed to delete', 'error');
     } catch (err) {
+      logger.error({ err }, 'QuizManagement confirmDelete failed');
       notify('Network error', 'error');
     }
     setDeleteTarget(null);
+    submittingRef.current = false;
+    setSubmitting(false);
   };
 
   const startEdit = (quiz) => {
@@ -203,9 +221,13 @@ const QuizManagement = () => {
     }
   };
   const handleBulkAction = async (action) => {
+    play('submit');
+    if (submittingRef.current) return;
     const ids = [...selectedIds];
     if (!ids.length) return notify('Aucun quiz sélectionné.', 'warning');
     if (action === 'delete') { setBulkDeleteTarget(ids); return; }
+    submittingRef.current = true;
+    setSubmitting(true);
     setBulkProcessing(true);
     try {
       const url = action === 'publish' ? '/api/bulk/publish' : '/api/bulk/unpublish';
@@ -215,12 +237,15 @@ const QuizManagement = () => {
       try { data = JSON.parse(text); } catch { data = { message: `HTTP ${res.status}: ${text.substring(0, 100)}` }; }
       if (res.ok) { notify(data.message, 'success'); setSelectedIds(new Set()); fetchQuizzes(); }
       else notify(`Erreur (${res.status}): ${data.message}`, 'error');
-    } catch (e) { notify(`Action groupée échouée: ${e.message}`, 'error'); }
-    finally { setBulkProcessing(false); }
+    } catch (e) { logger.error({ err: e }, 'QuizManagement handleBulkAction failed'); notify(`Action groupée échouée: ${e.message}`, 'error'); }
+    finally { setBulkProcessing(false); submittingRef.current = false; setSubmitting(false); }
   };
 
   const confirmBulkDelete = async () => {
-    if (!bulkDeleteTarget?.length) return;
+    play('delete');
+    if (!bulkDeleteTarget?.length || submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
     setBulkProcessing(true);
     try {
       const res = await authFetch('/api/bulk/delete', { method: 'POST', body: JSON.stringify({ ids: bulkDeleteTarget }) });
@@ -229,8 +254,8 @@ const QuizManagement = () => {
       try { data = JSON.parse(text); } catch { data = { message: `HTTP ${res.status}: ${text.substring(0, 100)}` }; }
       if (res.ok) { notify(data.message, 'success'); setSelectedIds(new Set()); fetchQuizzes(); }
       else notify(`Erreur (${res.status}): ${data.message}`, 'error');
-    } catch (e) { notify(`Suppression groupée échouée: ${e.message}`, 'error'); }
-    finally { setBulkProcessing(false); setBulkDeleteTarget(null); }
+    } catch (e) { logger.error({ err: e }, 'QuizManagement confirmBulkDelete failed'); notify(`Suppression groupée échouée: ${e.message}`, 'error'); }
+    finally { setBulkProcessing(false); setBulkDeleteTarget(null); submittingRef.current = false; setSubmitting(false); }
   };
 
   const handleCSVImport = async (e) => {
@@ -241,18 +266,22 @@ const QuizManagement = () => {
     try {
       setCsvImporting(true);
       const res    = await authFetch('/api/import-quizzes-csv', { method: 'POST', body: formData });
-      const result = await res.json();
-      notify(result.message, res.ok ? 'success' : 'error');
+      const result = res.ok ? await res.json() : null;
+      notify(result?.message || 'Import finished', res.ok ? 'success' : 'error');
       fetchQuizzes();
-    } catch { notify('CSV import failed', 'error'); }
+    } catch (err) { logger.error({ err }, 'QuizManagement CSV import failed'); notify('CSV import failed', 'error'); }
     finally { setCsvImporting(false); e.target.value = ''; }
   };
 
   const handleCreateCase = async () => {
+    play('submit');
+    if (submittingRef.current) return;
     if (!caseForm.title || !caseForm.description || !caseForm.moduleId)
       return notify('Please fill all fields.', 'warning');
     const incomplete = caseForm.quizzes.findIndex((q) => !q.questionText || q.options.some((o) => !o) || q.correctIndices.length === 0);
     if (incomplete >= 0) return notify(`Quiz ${incomplete + 1} is incomplete — fill in question, all options, and select correct answer(s).`, 'warning');
+    submittingRef.current = true;
+    setSubmitting(true);
     setCreatingCase(true);
     try {
       const res = await authFetch('/api/admin/create-case-quizzes', {
@@ -260,7 +289,7 @@ const QuizManagement = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: caseForm.title, description: caseForm.description, moduleId: caseForm.moduleId, quizzes: caseForm.quizzes }),
       });
-      const data = await res.json();
+      const data = res.ok ? await res.json() : null;
       if (res.ok) {
         notify(data.message, 'success');
         setShowCaseModal(false);
@@ -269,10 +298,13 @@ const QuizManagement = () => {
       } else {
         notify(`Error: ${data.message}`, 'error');
       }
-    } catch {
+    } catch (err) {
+      logger.error({ err }, 'QuizManagement handleCreateCase failed');
       notify('Failed to create case', 'error');
     } finally {
       setCreatingCase(false);
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   };
 
@@ -332,7 +364,7 @@ const QuizManagement = () => {
       {error && <div className="error-banner">{error}<button onClick={() => setError('')}>&times;</button></div>}
 
       <div className="qm-header">
-        <h1 className="qm-logo">Maîtrisez <span className="qm-logo-light">| Admin Dashboard</span></h1>
+        <h1 className="qm-logo">MAITRISEZ <span className="qm-logo-light">| Admin Dashboard</span></h1>
         <span className="qm-user">Admin</span>
       </div>
 
@@ -414,8 +446,8 @@ const QuizManagement = () => {
 
 
         <div className="qm-actions">
-          <button type="button" className="btn-draft" onClick={() => handleSubmit(false)}><FaSave /> Save Draft</button>
-          <button type="button" className="btn-publish" onClick={() => handleSubmit(true)}><FaPaperPlane /> Publish</button>
+          <button type="button" className="btn-draft" onClick={() => handleSubmit(false)} disabled={submitting}><FaSave /> Save Draft</button>
+          <button type="button" className="btn-publish" onClick={() => handleSubmit(true)} disabled={submitting}><FaPaperPlane /> Publish</button>
           {editId && <button type="button" className="btn-cancel" onClick={resetForm}>Cancel</button>}
         </div>
       </div>
@@ -591,6 +623,7 @@ const QuizManagement = () => {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
         confirmText="Delete"
+        confirmDisabled={submitting}
       />
 
       <ConfirmModal
@@ -601,6 +634,7 @@ const QuizManagement = () => {
         onCancel={() => setBulkDeleteTarget(null)}
         confirmText="Supprimer"
         cancelText="Annuler"
+        confirmDisabled={submitting}
       />
     </div>
   );

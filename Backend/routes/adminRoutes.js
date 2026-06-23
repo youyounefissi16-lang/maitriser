@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import { verifyToken as clerkVerify, createClerkClient } from '@clerk/backend';
 import User from '../models/userModel.js';
 import logger from '../utils/logger.js';
@@ -11,24 +12,19 @@ const getClerkClient = () => {
   return createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 };
 
-router.post('/admin/claim', async (req, res) => {
+router.post('/admin/claim', verifyToken, async (req, res) => {
   try {
-    const clerkClient = getClerkClient();
-    if (!clerkClient) return res.status(500).json({ message: 'Clerk not configured' });
-
     const { code } = req.body;
-    if (code !== process.env.ADMIN_SECRET_CODE) {
+    const secret = process.env.ADMIN_SECRET_CODE || '';
+    const input = code || '';
+    const a = Buffer.from(secret);
+    const b = Buffer.from(input);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
       return res.status(403).json({ message: 'Invalid admin code' });
     }
 
-    const authHeader = req.headers['authorization'];
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'No token provided' });
-    }
-
-    const payload = await clerkVerify(authHeader.split(' ')[1], { secretKey: process.env.CLERK_SECRET_KEY });
-    const user = await User.findOne({ clerkId: payload.sub });
-    if (!user) return res.status(404).json({ message: 'User not found. Sync first.' });
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     user.role = 'admin';
     await user.save();
@@ -53,15 +49,24 @@ router.post('/admin/sync-all-users', verifyToken, requireAdmin, async (req, res)
       const clerkUsers = await clerkClient.users.getUserList({ limit, offset });
       if (!clerkUsers.data || clerkUsers.data.length === 0) break;
 
+      const clerkIds = clerkUsers.data.map((cu) => cu.id);
+      const emails = clerkUsers.data.map((cu) => cu.emailAddresses?.[0]?.emailAddress).filter(Boolean);
+      const existingUsers = await User.find({ $or: [{ clerkId: { $in: clerkIds } }, { email: { $in: emails } }] });
+      const existingByClerkId = {};
+      const existingByEmail = {};
+      existingUsers.forEach((u) => {
+        if (u.clerkId) existingByClerkId[u.clerkId] = u;
+        if (u.email) existingByEmail[u.email] = u;
+      });
+
       for (const cu of clerkUsers.data) {
-        const existingUser = await User.findOne({ clerkId: cu.id });
-        if (existingUser) continue;
+        if (existingByClerkId[cu.id]) continue;
 
         const email = cu.emailAddresses?.[0]?.emailAddress;
         const name = `${cu.firstName || ''} ${cu.lastName || ''}`.trim() || email?.split('@')[0] || 'User';
         const userId = email?.split('@')[0] || `user_${cu.id.slice(-8)}`;
 
-        const linkedUser = await User.findOne({ email });
+        const linkedUser = existingByEmail[email];
         if (linkedUser) {
           linkedUser.clerkId = cu.id;
           linkedUser.name = name;
@@ -72,7 +77,7 @@ router.post('/admin/sync-all-users', verifyToken, requireAdmin, async (req, res)
             userId,
             clerkId: cu.id,
             name,
-            email: email || `${cu.id}@placeholder.quizapp`,
+            email: email || `${cu.id}@placeholder.maitrisez.com`,
             emailVerified: !!cu.emailAddresses?.[0]?.verification?.status,
             role: 'user',
           }).save();

@@ -1,6 +1,7 @@
 import ContactMessage from '../models/contactModel.js';
 import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
+import { broadcast } from '../ws.js';
 
 // Add a new contact message
 export const addContactMessage = catchAsync(async (req, res) => {
@@ -21,10 +22,11 @@ export const addContactMessage = catchAsync(async (req, res) => {
         return res.status(400).json({ message: 'Message must be between 10 and 5000 characters' });
     }
 
+    const stripHtml = (s) => s.replace(/<[^>]*>/g, '');
     const newContactMessage = new ContactMessage({
-        name,
+        name: stripHtml(name),
         email,
-        message,
+        message: stripHtml(message),
     });
 
     await newContactMessage.save();
@@ -32,10 +34,19 @@ export const addContactMessage = catchAsync(async (req, res) => {
         message: 'Message submitted successfully', 
         contactMessage: newContactMessage 
     });
+    broadcast('contact:new', { name: newContactMessage.name, email: newContactMessage.email });
 });
 
 // Get all contact messages (for administrative purposes)
 export const getAllContactMessages = catchAsync(async (req, res) => {
-    const contactMessages = await ContactMessage.find();
-    res.status(200).json(contactMessages);
+    const { skip, limit, page } = req.pagination || {};
+    const [contactMessages, total] = await Promise.all([
+      ContactMessage.find().sort({ createdAt: -1 }).skip(skip).limit(limit),
+      ContactMessage.countDocuments(),
+    ]);
+    res.status(200).json(
+      skip !== undefined
+        ? { data: contactMessages, page, limit, total, totalPages: Math.ceil(total / limit) }
+        : contactMessages
+    );
 });

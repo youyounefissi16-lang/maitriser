@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { useToast } from '../components/Toast';
 import { useTranslation } from '../context/LanguageContext';
+import { logger } from '../utils/logger';
 import '../styles/teal-theme.css';
 
 const ProfilePage = () => {
@@ -18,7 +19,7 @@ const ProfilePage = () => {
   const [changingPwd, setChangingPwd] = useState(false);
 
   useEffect(() => {
-    document.title = 'Mon Profil — QuizApp';
+    document.title = `${t('profile.title')} — MAITRISEZ`;
     const controller = new AbortController();
     fetchUser(controller.signal);
     return () => controller.abort();
@@ -32,79 +33,75 @@ const ProfilePage = () => {
         setName(data.user?.name || '');
         setEmail(data.user?.email || '');
       } else {
-        notify('Erreur lors du chargement du profil.', 'error');
+        notify(t('profile.error'), 'error');
       }
     } catch (err) {
       if (err.name === 'AbortError') return;
-      notify('Erreur lors du chargement du profil.', 'error');
+      logger.error({ err }, 'ProfilePage fetchUser failed');
+      notify(t('profile.error'), 'error');
     }
     setLoading(false);
   };
 
   const handleSaveProfile = async () => {
-    if (!name.trim()) return notify('Name is required', 'warning');
+    if (!name.trim()) return notify(t('profile.nameRequired'), 'warning');
     setSaving(true);
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/api/users/profile`, {
         method: 'PUT',
         body: { name: name.trim(), email: email.trim() },
       });
-      const data = await res.json();
+      const data = res.ok ? await res.json() : null;
       if (res.ok) {
         notify(t('profile.saved'), 'success');
-        if (data.user) { setName(data.user.name); setEmail(data.user.email); }
-      } else notify(data.message || t('profile.error'), 'error');
-    } catch { notify(t('profile.error'), 'error'); }
+        if (data?.user) { setName(data.user.name); setEmail(data.user.email); }
+      } else notify(data?.message || t('profile.error'), 'error');
+    } catch (err) { logger.error({ err }, 'ProfilePage save failed'); notify(t('profile.error'), 'error'); }
     finally { setSaving(false); }
   };
 
   const handleChangePassword = async () => {
-    if (!currentPassword || !newPassword) return notify('Fill all fields', 'warning');
-    if (newPassword.length < 6) return notify('New password must be at least 6 characters', 'warning');
+    if (!currentPassword || !newPassword) return notify(t('profile.fillAllFields'), 'warning');
+    if (newPassword.length < 6) return notify(t('profile.passwordMinLength'), 'warning');
     setChangingPwd(true);
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/api/users/change-password`, {
         method: 'PUT',
         body: { currentPassword, newPassword },
       });
-      const data = await res.json();
+      const data = res.ok ? await res.json() : null;
       if (res.ok) { notify(t('profile.pwdChanged'), 'success'); setCurrentPassword(''); setNewPassword(''); }
-      else notify(data.message, 'error');
-    } catch { notify(t('profile.error'), 'error'); }
+      else notify(data?.message || t('profile.error'), 'error');
+    } catch (err) { logger.error({ err }, 'ProfilePage changePassword failed'); notify(t('profile.error'), 'error'); }
     finally { setChangingPwd(false); }
   };
 
-  const inputStyle = {
-    width: '100%', padding: '10px 12px', border: '1px solid var(--border-light, #ddd)',
-    borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', marginBottom: '12px',
-  };
-
-  if (loading) return <div className="page-teal"><div className="card-teal" style={{ textAlign: 'center', padding: 40 }}>{t('loading')}</div></div>;
+  if (loading) return <div className="page-teal"><div className="card-teal profile-loading">{t('loading')}</div></div>;
 
   return (
     <div className="page-teal">
-      <div className="card-teal" style={{ maxWidth: '500px', margin: '0 auto' }}>
-        <h2 style={{ marginBottom: '24px' }}>{t('profile.title')}</h2>
+      <div className="card-teal profile-card">
+        <h2 className="profile-heading">{t('profile.title')}</h2>
 
-        <label style={{ fontWeight: 600, fontSize: '13px', display: 'block', marginBottom: '4px' }}>{t('profile.name')}</label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+        <label className="profile-label">{t('profile.name')}</label>
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="profile-input" />
 
-        <label style={{ fontWeight: 600, fontSize: '13px', display: 'block', marginBottom: '4px' }}>{t('profile.email')}</label>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
+        <label className="profile-label">{t('profile.email')}</label>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="profile-input" />
 
-        <button className="btn-primary" onClick={handleSaveProfile} disabled={saving} style={{ width: '100%', marginBottom: '32px' }}>
+        <button className="btn-primary profile-btn" onClick={handleSaveProfile} disabled={saving}>
           {saving ? t('profile.saving') : t('profile.save')}
         </button>
 
-        <h3 style={{ marginBottom: '16px' }}>{t('profile.passwordTitle')}</h3>
+        <h3 className="profile-heading">{t('profile.passwordTitle')}</h3>
 
-        <label style={{ fontWeight: 600, fontSize: '13px', display: 'block', marginBottom: '4px' }}>{t('profile.currentPwd')}</label>
-        <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} style={inputStyle} />
+        <label className="profile-label">{t('profile.currentPwd')}</label>
+        <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="profile-input" />
 
-        <label style={{ fontWeight: 600, fontSize: '13px', display: 'block', marginBottom: '4px' }}>{t('profile.newPwd')}</label>
-        <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={inputStyle} />
+        <label className="profile-label">{t('profile.newPwd')}</label>
+        <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="profile-input" />
 
-        <button className="btn-primary" onClick={handleChangePassword} disabled={changingPwd} style={{ width: '100%' }}>
+        <button className="btn-primary profile-btn" onClick={handleChangePassword} disabled={changingPwd}>
           {changingPwd ? t('profile.saving') : t('profile.changePwd')}
         </button>
       </div>

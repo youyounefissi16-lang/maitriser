@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import VoiceExam from '../components/VoiceExam.jsx';
 import { SkeletonCard, SkeletonFilters } from '../components/LoadingSkeleton';
+import { logger } from '../utils/logger';
 import '../styles/teal-theme.css';
 
 const YEARS = [1, 2, 3, 4, 5, 6, 7];
@@ -23,7 +24,11 @@ const VoiceExamPage = () => {
     setFilteredModules(selectedYear ? modules.filter((m) => m.year === Number(selectedYear)) : modules);
     setSelectedModuleId('');
   }, [selectedYear, modules]);
-  useEffect(() => { fetchExams(); }, [selectedYear, selectedModuleId]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchExams(controller.signal);
+    return () => controller.abort();
+  }, [selectedYear, selectedModuleId]);
 
   const fetchModules = async () => {
     setLoadingModules(true);
@@ -33,23 +38,26 @@ const VoiceExamPage = () => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setModules(await res.json());
     } catch (err) {
+      logger.error({ err }, 'VoiceExamPage fetchModules failed');
       setModulesError(err.message);
     } finally {
       setLoadingModules(false);
     }
   };
 
-  const fetchExams = useCallback(async () => {
+  const fetchExams = useCallback(async (signal) => {
     setLoadingExams(true);
     setExamsError(null);
     try {
       let url = `${API_BASE_URL}/api/voice-exams?`;
       if (selectedModuleId)  url += `moduleId=${selectedModuleId}`;
       else if (selectedYear) url += `year=${selectedYear}`;
-      const res = await fetchWithAuth(url);
+      const res = await fetchWithAuth(url, signal ? { signal } : undefined);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setExams(await res.json());
     } catch (err) {
+      if (err.name === 'AbortError') return;
+      logger.error({ err }, 'VoiceExamPage fetchExams failed');
       setExamsError(err.message);
     } finally {
       setLoadingExams(false);

@@ -4,6 +4,8 @@ import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { useToast } from '../components/Toast.jsx';
 import { useTranslation } from '../context/LanguageContext';
 import { shuffle } from '../utils/shuffle';
+import { logger } from '../utils/logger';
+import { useSound } from '../context/SoundContext';
 import '../styles/teal-theme.css';
 
 const MockExam = () => {
@@ -11,9 +13,11 @@ const MockExam = () => {
   const navigate = useNavigate();
   const notify = useToast();
   const { t } = useTranslation();
-  const userId = localStorage.getItem('userId') || 'anonymous';
+  const play = useSound();
+  let userId;
+  try { userId = localStorage.getItem('userId') || 'anonymous'; } catch { userId = 'anonymous'; }
 
-  useEffect(() => { document.title = 'Examen Blanc — QuizApp'; }, []);
+  useEffect(() => { document.title = 'Examen Blanc — MAITRISEZ'; }, []);
 
   const questions = useMemo(() => {
     if (!state?.quizzes?.length) return [];
@@ -31,9 +35,16 @@ const MockExam = () => {
   // Restore saved exam state from sessionStorage
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+  const [flagged, setFlagged] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('mock-exam-flagged');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState(null);
+  const [reviewing, setReviewing] = useState(false);
   const [timeLeft, setTimeLeft] = useState(totalSeconds);
   const timerRef = useRef(null);
   const mountedRef = useRef(true);
@@ -61,7 +72,18 @@ const MockExam = () => {
     try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)); } catch { /* ignore */ }
   }, [answers, currentIndex, timeLeft, submitted, questions]);
 
-  const clearSaved = () => { try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ } };
+  useEffect(() => {
+    try { sessionStorage.setItem('mock-exam-flagged', JSON.stringify(flagged)); } catch { /* ignore */ }
+  }, [flagged]);
+
+  const toggleFlag = useCallback((qId) => {
+    play('click');
+    setFlagged((prev) => prev.includes(qId) ? prev.filter((id) => id !== qId) : [...prev, qId]);
+  }, []);
+
+  const clearSaved = () => {
+    try { sessionStorage.removeItem(STORAGE_KEY); sessionStorage.removeItem('mock-exam-flagged'); } catch { /* ignore */ }
+  };
 
   useEffect(() => {
     const onLeave = (e) => { if (!submitted) { e.preventDefault(); e.returnValue = ''; } };
@@ -71,6 +93,7 @@ const MockExam = () => {
 
   const toggleOption = useCallback((qId, opt) => {
     if (submitted) return;
+    play('select');
     setAnswers((prev) => {
       const current = prev[qId] || [];
       return {
@@ -84,11 +107,7 @@ const MockExam = () => {
 
   const handleSubmit = useCallback(async () => {
     if (submitted) return;
-    const unanswered = questions.filter((q) => !answers[q._id] || answers[q._id].length === 0);
-    if (unanswered.length > 0) {
-      notify(t('mock.unanswered', { n: unanswered.length }), 'warning');
-      return;
-    }
+    play('submit');
     setSubmitting(true);
     clearTimeout(timerRef.current);
     try {
@@ -100,6 +119,7 @@ const MockExam = () => {
             method: 'POST',
             body: { selectedAnswers: selected },
           });
+          if (!res.ok) throw new Error('Submission failed');
           const data = await res.json();
           return { quiz: q, ...data };
         })
@@ -112,7 +132,8 @@ const MockExam = () => {
         setResults(submissionResults);
         setSubmitted(true);
       }
-    } catch {
+    } catch (err) {
+      logger.error({ err }, 'MockExam handleSubmit failed');
       if (mountedRef.current) notify('Erreur lors de la soumission. Veuillez réessayer.', 'error');
     } finally {
       if (mountedRef.current) setSubmitting(false);
@@ -151,7 +172,7 @@ const MockExam = () => {
       <div className="page-teal">
         <div className="card-teal" style={{ textAlign: 'center' }}>
           <p>{t('mock.noQuestions')}</p>
-          <button className="btn-dark" onClick={() => navigate('/quizPage')}>{t('mock.back')}</button>
+            <button className="btn-dark" onClick={() => { play('prev'); navigate('/quizPage'); }}>{t('mock.back')}</button>
         </div>
       </div>
     );
@@ -166,13 +187,9 @@ const MockExam = () => {
       <div className="page-teal">
         <div className="card-teal" style={{ maxWidth: '800px' }}>
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <h2 className="mock-result-title" style={{ margin: '0 0 8px', fontSize: '28px' }}>📊 {t('mock.result')}</h2>
-            <div className="mock-result-score" style={{
-              fontSize: '48px', fontWeight: 800,
-              color: percentage >= 60 ? '#27ae60' : '#e74c3c',
-              margin: '16px 0',
-            }}>{percentage}%</div>
-            <p style={{ color: '#555', fontSize: '16px' }}>{correct} / {total} {t('mock.correct').toLowerCase()}es</p>
+            <h2 className="mock-result-title" style={{ margin: '0 0 8px' }}>📊 {t('mock.result')}</h2>
+            <div className={`mock-result-score ${percentage >= 60 ? 'passing' : 'failing'}`}>{percentage}%</div>
+            <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-base)' }}>{correct} / {total} {t('mock.correct').toLowerCase()}</p>
           </div>
 
           <div className="exam-results-list">
@@ -199,7 +216,7 @@ const MockExam = () => {
           </div>
 
           <div style={{ textAlign: 'center', marginTop: '24px' }}>
-            <button className="btn-dark" onClick={() => navigate('/quizPage')}>{t('mock.back')}</button>
+          <button className="btn-dark" onClick={() => { play('prev'); navigate('/quizPage'); }}>{t('mock.back')}</button>
           </div>
         </div>
       </div>
@@ -208,6 +225,52 @@ const MockExam = () => {
 
   const current = questions[currentIndex];
   const totalQuestions = questions.length;
+  const answeredCount = Object.keys(answers).length;
+
+  if (reviewing) {
+    const unanswered = questions.filter((q) => !answers[q._id] || answers[q._id].length === 0);
+    return (
+      <div className="page-teal">
+        <div className="card-teal" style={{ maxWidth: '800px' }}>
+          <h2 style={{ marginBottom: '8px' }}>Review Your Answers</h2>
+          <p style={{ color: '#555', fontSize: '14px', marginBottom: '16px' }}>
+            {answeredCount} of {totalQuestions} answered{unanswered.length > 0 ? ` (${unanswered.length} skipped)` : ''}
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+            {questions.map((q, i) => {
+              const isAnswered = answers[q._id] && answers[q._id].length > 0;
+              const isFlagged = flagged.includes(q._id);
+              let bg = '#f0f0f0';
+              let label = `${i + 1}`;
+              if (isAnswered) { bg = '#d4edda'; label = `✓ ${i + 1}`; }
+              if (isFlagged) { bg = '#fff3cd'; label = `⚑ ${i + 1}`; }
+              if (isAnswered && isFlagged) { bg = '#cce5ff'; label = `✓⚑ ${i + 1}`; }
+              return (
+                <button key={q._id} onClick={() => { setCurrentIndex(i); setReviewing(false); }}
+                  style={{
+                    width: '48px', height: '48px', borderRadius: '8px', border: '1px solid #ddd',
+                    background: bg, cursor: 'pointer', fontWeight: 700, fontSize: '13px',
+                    color: isFlagged ? '#856404' : isAnswered ? '#155724' : '#333',
+                  }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mock-nav" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
+            <button className="btn-dark" onClick={() => setReviewing(false)}>
+              ← Back to Question
+            </button>
+            <button className="btn-primary exam-submit-btn" onClick={handleSubmit} disabled={submitting}
+              style={{ background: unanswered.length > 0 ? '#e67e22' : undefined }}>
+              {submitting ? t('mock.submitting') : `Submit${unanswered.length > 0 ? ` (${unanswered.length} skipped)` : ''}`}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const progress = ((currentIndex + 1) / totalQuestions) * 100;
 
   return (
@@ -220,15 +283,34 @@ const MockExam = () => {
             </span>
             <div className="mock-header-right" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
               <span style={{ fontSize: '13px', color: '#888' }}>
-                {Object.keys(answers).length} / {totalQuestions} {t('mock.answered')}
+                {answeredCount} / {totalQuestions} {t('mock.answered')}
               </span>
-              <span className="timer-badge" style={{ color: timeLeft <= 60 ? '#e74c3c' : 'var(--text-dark)', fontSize: '16px' }}>
+              <span className="timer-badge timer-running" style={{ color: timeLeft <= 60 ? 'var(--color-danger)' : 'var(--text-dark)', fontSize: '16px' }}>
                 ⏱ {formatTime(timeLeft)}
               </span>
             </div>
           </div>
           <div className="exam-progress-bar">
             <div className="exam-progress-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
+            {questions.map((q, i) => {
+              const isAnswered = answers[q._id] && answers[q._id].length > 0;
+              const isFlagged = flagged.includes(q._id);
+              let dotColor = '#ddd';
+              if (isFlagged) dotColor = '#ffc107';
+              else if (isAnswered) dotColor = '#27ae60';
+              return (
+                <button key={q._id} onClick={() => setCurrentIndex(i)}
+                  style={{
+                    width: i === currentIndex ? '20px' : '16px', height: '6px', borderRadius: '3px',
+                    border: 'none', background: i === currentIndex ? '#14a3a8' : dotColor,
+                    cursor: 'pointer', transition: 'all 0.2s', padding: 0,
+                    opacity: i === currentIndex ? 1 : 0.6,
+                  }}
+                  title={`Q${i + 1}${isFlagged ? ' (flagged)' : ''}${isAnswered ? ' (answered)' : ''}`} />
+              );
+            })}
           </div>
         </div>
 
@@ -269,21 +351,36 @@ const MockExam = () => {
         </div>
 
         <div className="mock-nav" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>
-          <div>
+          <div style={{ display: 'flex', gap: '8px' }}>
             {currentIndex > 0 && (
-              <button className="btn-dark" onClick={() => setCurrentIndex((i) => i - 1)}>
+              <button className="btn-dark" onClick={() => { play('prev'); setCurrentIndex((i) => i - 1); }}>
                 {t('mock.prev')}
               </button>
             )}
+            <button className="btn-flag" onClick={() => toggleFlag(current._id)}
+              style={{
+                padding: '8px 16px', borderRadius: '8px', border: flagged.includes(current._id) ? '2px solid #ffc107' : '1px solid #ddd',
+                background: flagged.includes(current._id) ? '#fff8e1' : '#f9f9f9',
+                cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: flagged.includes(current._id) ? '#856404' : '#888',
+              }}>
+              ⚑ {flagged.includes(current._id) ? 'Flagged' : 'Flag'}
+            </button>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
+            <button className="btn-review" onClick={() => setReviewing(true)}
+              style={{
+                padding: '8px 16px', borderRadius: '8px', border: '1px solid #14a3a8',
+                background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: '#14a3a8',
+              }}>
+              Review all
+            </button>
             {currentIndex < totalQuestions - 1 ? (
-              <button className="btn-primary" onClick={() => setCurrentIndex((i) => i + 1)}>
+              <button className="btn-primary" onClick={() => { play('next'); setCurrentIndex((i) => i + 1); }}>
                 {t('mock.next')}
               </button>
             ) : (
-              <button className="btn-primary exam-submit-btn" onClick={handleSubmit} disabled={submitting}>
-                {submitting ? t('mock.submitting') : t('mock.submit')}
+              <button className="btn-primary exam-submit-btn" onClick={() => setReviewing(true)}>
+                Review & Submit
               </button>
             )}
           </div>

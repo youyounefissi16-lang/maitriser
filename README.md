@@ -1,4 +1,4 @@
-# QuizApp — Gestion de Quiz & Examens
+# MAITRISEZ — Gestion de Quiz & Examens
 
 Application MERN full-stack avec authentification Clerk, dédiée à la création, gestion et passation de quiz, examens à choix multiples, études de cas et examens oraux. Interfaces séparées pour les administrateurs et les utilisateurs.
 

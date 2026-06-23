@@ -1,17 +1,13 @@
 import express from 'express';
-import { body, param, validationResult } from 'express-validator';
+import { body, param } from 'express-validator';
+import crypto from 'crypto';
 import User from '../models/userModel.js';
-import bcrypt from 'bcrypt';
 import { getPagination, paginatedResponse } from '../utils/paginate.js';
+import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
+import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
-
-const handleValidation = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
-  next();
-};
 
 // Create a user — admin generates a random initial password and returns it once
 router.post(
@@ -22,12 +18,12 @@ router.post(
     body('email').isEmail().normalizeEmail(),
     body('role').optional().isIn(['user', 'admin']),
   ],
-  handleValidation,
+  validate,
   async (req, res) => {
     const { userId, name, email, role } = req.body;
 
     // Generate a random temporary password (the model hashes it on save)
-    const tempPassword = Math.random().toString(36).slice(-10);
+    const tempPassword = crypto.randomBytes(12).toString('hex');
 
     const newUser = new User({ userId, name, email, password: tempPassword, role });
 
@@ -36,6 +32,7 @@ router.post(
       // Return the temp password ONCE so admin can share it with the user securely
       res.status(201).json({ message: 'User created successfully', tempPassword });
     } catch (error) {
+      logger.error({ err: error, userId }, 'Add user failed');
       if (error.code === 11000) return res.status(409).json({ message: 'userId or email already exists' });
       res.status(500).json({ message: 'Error creating user' });
     }
@@ -53,7 +50,7 @@ router.get('/users', catchAsync(async (req, res) => {
 }));
 
 // Delete user by ID
-router.delete('/users/delete-user/:id', [param('id').isMongoId()], handleValidation, catchAsync(async (req, res) => {
+router.delete('/users/delete-user/:id', [param('id').isMongoId()], validate, catchAsync(async (req, res) => {
   const deletedUser = await User.findByIdAndDelete(req.params.id);
   if (!deletedUser) return res.status(404).json({ message: 'User not found' });
   res.status(200).json({ message: 'User deleted successfully' });
@@ -68,7 +65,7 @@ router.put(
     body('email').optional().isEmail().normalizeEmail(),
     body('role').optional().isIn(['user', 'admin']),
   ],
-  handleValidation,
+  validate,
   catchAsync(async (req, res) => {
     const { name, email, role } = req.body;
     const updatedUser = await User.findByIdAndUpdate(
@@ -88,11 +85,11 @@ router.put(
     body('currentPassword').notEmpty().withMessage('Current password is required'),
     body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters'),
   ],
-  handleValidation,
+  validate,
   catchAsync(async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    const isMatch = await bcrypt.compare(req.body.currentPassword, user.password);
+    const isMatch = await user.comparePassword(req.body.currentPassword);
     if (!isMatch) return res.status(400).json({ message: 'Current password is incorrect' });
     user.password = req.body.newPassword;
     await user.save();

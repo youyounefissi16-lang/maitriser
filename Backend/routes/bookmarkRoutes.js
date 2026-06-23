@@ -1,5 +1,6 @@
 import express from 'express';
 import Bookmark from '../models/bookmarkModel.js';
+import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
 
 const router = express.Router();
@@ -7,14 +8,14 @@ const router = express.Router();
 router.get('/bookmarks', catchAsync(async (req, res) => {
   const userId = req.user?.userId;
   if (!userId) return res.status(400).json({ message: 'userId required' });
-  const bookmarks = await Bookmark.find({ userId }).populate('quizId');
+  const bookmarks = await Bookmark.find({ userId }).populate('quizId', 'quizId question questionText');
   res.json(bookmarks);
 }));
 
 router.post('/bookmarks/toggle', catchAsync(async (req, res) => {
   const userId = req.user?.userId;
   const { quizId } = req.body;
-  if (!userId || !quizId) return res.status(400).json({ message: 'userId and quizId required' });
+  if (!userId || !quizId || typeof quizId !== 'string') return res.status(400).json({ message: 'userId and quizId required' });
 
   const existing = await Bookmark.findOne({ userId, quizId });
   if (existing) {
@@ -28,6 +29,7 @@ router.post('/bookmarks/toggle', catchAsync(async (req, res) => {
 router.get('/bookmarks/:quizId', catchAsync(async (req, res) => {
   const userId = req.user?.userId;
   if (!userId) return res.status(400).json({ message: 'userId required' });
+  if (typeof req.params.quizId !== 'string') return res.status(400).json({ message: 'Invalid quizId' });
   const bookmark = await Bookmark.findOne({ userId, quizId: req.params.quizId });
   res.json({ bookmarked: !!bookmark });
 }));

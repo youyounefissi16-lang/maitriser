@@ -29,6 +29,8 @@ userSchema.methods.comparePassword = async function (inputPassword) {
 
 userSchema.index({ role: 1, createdAt: -1 });
 userSchema.index({ createdAt: -1 });
+userSchema.index({ verificationToken: 1 }, { sparse: true });
+userSchema.index({ resetToken: 1 }, { sparse: true });
 
 const User = mongoose.model('User', userSchema);
 export default User;

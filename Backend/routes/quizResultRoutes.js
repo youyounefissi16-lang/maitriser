@@ -1,30 +1,27 @@
 import express from 'express';
-import { param, validationResult } from 'express-validator';
+import { param } from 'express-validator';
 import Quiz from '../models/quizModel.js';
 import QuizResult from '../models/quizResultModel.js';
-import { getPagination, paginatedResponse } from '../utils/paginate.js';
+import logger from '../utils/logger.js';
+import { broadcast } from '../ws.js';
 import { catchAsync } from '../utils/asyncHandler.js';
+import { getPagination, paginatedResponse } from '../utils/paginate.js';
+import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
 
-const handleValidation = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
-  next();
-};
-
 // POST /api/quizzes/:quizId/submit
 // Body: { selectedAnswers: [] }
-router.post('/quizzes/:quizId/submit', [param('quizId').isMongoId()], handleValidation, catchAsync(async (req, res) => {
+router.post('/quizzes/:quizId/submit', [param('quizId').isMongoId()], validate, catchAsync(async (req, res) => {
   const { quizId } = req.params;
   const { selectedAnswers } = req.body;
   const userId = req.user?.userId;
 
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
+  if (!userId) return res.status(400).json({ message: 'userId is required' });
 
   const quiz = await Quiz.findById(quizId);
-  if (!quiz) return res.status(404).json({ error: 'Quiz not found' });
-  if (!quiz.published) return res.status(404).json({ error: 'Quiz not found' });
+  if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+  if (!quiz.published) return res.status(404).json({ message: 'Quiz not found' });
 
   const correct = quiz.question.correctAnswers;
 
@@ -50,6 +47,7 @@ router.post('/quizzes/:quizId/submit', [param('quizId').isMongoId()], handleVali
     selectedAnswers,
     explanation: quiz.explanation || '',
   });
+  broadcast('quiz:submitted', { userId, quizId, correct: isCorrect, score });
 }));
 
 // GET /api/results/:userId — fetch attempt history

@@ -33,7 +33,7 @@ async function sendEmail({ to, subject, html }) {
     return false;
   }
 
-  const from = process.env.EMAIL_FROM || `"QuizApp" <${process.env.SMTP_USER || 'noreply@quizapp.local'}>`;
+  const from = process.env.EMAIL_FROM || `"MAITRISEZ" <${process.env.SMTP_USER || 'noreply@maitrisez.com'}>`;
 
   try {
     await transporter.sendMail({ from, to, subject, html });

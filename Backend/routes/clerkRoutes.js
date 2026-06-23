@@ -46,7 +46,7 @@ router.post('/clerk-sync', async (req, res) => {
           userId,
           clerkId: payload.sub,
           name,
-          email: email || `${payload.sub}@placeholder.quizapp`,
+          email: email || `${payload.sub}@placeholder.maitrisez.com`,
           emailVerified: !!clerkUser.emailAddresses?.[0]?.verification?.status,
           role: 'user',
         });

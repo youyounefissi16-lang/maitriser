@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { SkeletonQuizItem } from '../components/LoadingSkeleton';
+import { logger } from '../utils/logger';
 import '../styles/teal-theme.css';
 
 const ReviewPage = () => {
@@ -9,14 +10,15 @@ const ReviewPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const userId = localStorage.getItem('userId');
+  let userId;
+  try { userId = localStorage.getItem('userId'); } catch { userId = null; }
 
-  const fetchResults = useCallback(async () => {
+  const fetchResults = useCallback(async (signal) => {
     if (!userId) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/api/results/${userId}`);
+      const res = await fetchWithAuth(`${API_BASE_URL}/api/results/${userId}`, signal ? { signal } : undefined);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const results = Array.isArray(data) ? data : [];
@@ -30,34 +32,40 @@ const ReviewPage = () => {
         });
       setWrongAnswers(wrong);
     } catch (err) {
+      if (err.name === 'AbortError') return;
+      logger.error({ err }, 'ReviewPage fetchResults failed');
       setError(err.message);
     } finally {
       setLoading(false);
     }
   }, [userId]);
 
-  useEffect(() => { fetchResults(); }, [fetchResults]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchResults(controller.signal);
+    return () => controller.abort();
+  }, [fetchResults]);
 
   if (loading) return <div className="page-teal"><div className="card-teal"><SkeletonQuizItem count={4} /></div></div>;
 
   return (
     <div className="page-teal">
       <div className="card-teal">
-        <h2>🔄 Révision — Questions échouées</h2>
+        <h2>🔄 Spaced Repetition — Review Failed Questions</h2>
         {error ? (
           <div className="empty-state" style={{ color: '#e74c3c' }}>
-            <p>Erreur lors du chargement : {error}</p>
-            <button type="button" className="btn-primary" onClick={fetchResults} style={{ marginTop: '12px' }}>Réessayer</button>
+                <p>Error loading: {error}</p>
+                <button type="button" className="btn-primary" onClick={fetchResults} style={{ marginTop: '12px' }}>Retry</button>
           </div>
         ) : wrongAnswers.length === 0 ? (
           <div className="empty-state">
-            <p style={{ fontSize: '16px', marginBottom: '8px' }}>Aucune question à réviser !</p>
-            <p style={{ color: '#888' }}>Toutes les questions que vous avez déjà réussies ou aucune tentative pour le moment.</p>
+            <p style={{ fontSize: '16px', marginBottom: '8px' }}>No questions to review!</p>
+            <p style={{ color: '#888' }}>All previously failed questions have been retried successfully, or you haven't attempted any quizzes yet.</p>
           </div>
         ) : (
           <>
             <p style={{ color: '#555', marginBottom: '16px' }}>
-              {wrongAnswers.length} question{wrongAnswers.length > 1 ? 's' : ''} à revoir. La répétition espacée vous aide à mémoriser les réponses correctes.
+              {wrongAnswers.length} question{wrongAnswers.length > 1 ? 's' : ''} to review. Questions you answered incorrectly are shown here for spaced repetition — retry them to strengthen your memory before the exam.
             </p>
             {wrongAnswers.map((r) => {
               const quiz = r.quizId;
@@ -66,10 +74,10 @@ const ReviewPage = () => {
                   <div className="qid">{quiz.quizId || ''}</div>
                   <h3>{quiz.question?.questionText?.substring(0, 80) || quiz._id}</h3>
                   <div className="qmeta">
-                    Dernière tentative : {new Date(r.timestamp).toLocaleDateString('fr-FR')}
+                    Last attempt: {new Date(r.timestamp).toLocaleDateString('en-US')}
                   </div>
                   <button className="btn-primary" onClick={() => navigate(`/quiz/${quiz._id}`, { state: { quizId: quiz._id, quizName: quiz.question?.questionText || quiz.quizId, question: quiz.question, caseId: quiz.caseId || null } })}>
-                    Réessayer
+                    Retry
                   </button>
                 </div>
               );

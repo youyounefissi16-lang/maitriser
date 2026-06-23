@@ -5,6 +5,7 @@ import fs from 'fs';
 import Module from '../models/moduleModel.js';
 import { requireAdmin } from '../controllers/authController.js';
 import { cacheMiddleware, delPattern } from '../utils/cache.js';
+import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
 
 const router = express.Router();
@@ -72,7 +73,7 @@ router.post('/import-modules-csv', requireAdmin, upload.single('file'), catchAsy
         await Module.create({ name, year, courses });
         results.created++;
       } catch (e) {
-        results.errors.push(`Row "${row.name}": ${e.message}`);
+        results.errors.push(`Row "${row.name}": import error`);
       }
     }
 
@@ -81,6 +82,7 @@ router.post('/import-modules-csv', requireAdmin, upload.single('file'), catchAsy
       ...results,
     });
   } catch (err) {
+    logger.error({ err }, 'Module CSV import failed');
     if (filePath) try { fs.unlinkSync(filePath); } catch { /* best-effort cleanup */ }
     res.status(500).json({ message: 'Import failed' });
   }

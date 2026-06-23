@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../config/authFetch';
 import Spinner from '../components/Spinner';
+import { logger } from '../utils/logger';
 import '../styles/Reports.css';
 
 const Reports = () => {
@@ -16,6 +17,7 @@ const Reports = () => {
         const data = await res.json();
         setStats(data);
       } catch (err) {
+        logger.error({ err }, 'Reports fetchStats failed');
         setError(err.message);
       } finally {
         setLoading(false);

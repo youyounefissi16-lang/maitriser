@@ -1,26 +1,31 @@
 import express from 'express';
-import { body, validationResult } from 'express-validator';
+import { body } from 'express-validator';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../models/userModel.js';
 import logger from '../utils/logger.js';
+import { broadcast } from '../ws.js';
+import { validatePassword } from '../middleware/passwordValidator.js';
+import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
 
-const handleValidation = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
-  next();
-};
-
-// Admin registration — creates user in the unified User collection
 router.post(
   '/register',
   [
     body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters').custom(validatePassword),
+    body('admin_secret').notEmpty().withMessage('Admin secret is required'),
   ],
-  handleValidation,
+  validate,
   async (req, res) => {
+    const secret = process.env.ADMIN_SECRET_CODE || '';
+    const input = req.body.admin_secret || '';
+    const a = Buffer.from(secret);
+    const b = Buffer.from(input);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      return res.status(403).json({ message: 'Invalid admin secret.' });
+    }
     const { email, password } = req.body;
     try {
       const existingUser = await User.findOne({ email });
@@ -31,7 +36,8 @@ router.post(
       const user = new User({ userId, name, email, password, role: 'admin' });
       await user.save();
 
-      return res.status(201).json({ message: 'Admin registered successfully!' });
+      res.status(201).json({ message: 'Admin registered successfully!' });
+      broadcast('user:signedUp', { userId, email });
     } catch (err) {
       logger.error({ err }, 'Admin registration failed');
       if (err.code === 11000) return res.status(409).json({ message: 'Email already exists' });
@@ -40,11 +46,10 @@ router.post(
   }
 );
 
-// Admin login — queries User collection with role: 'admin'
 router.post(
   '/logging',
   [body('email').isEmail().normalizeEmail(), body('password').notEmpty()],
-  handleValidation,
+  validate,
   async (req, res) => {
     const { email, password } = req.body;
     try {

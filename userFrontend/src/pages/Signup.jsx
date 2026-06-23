@@ -24,7 +24,7 @@ const Signup = () => {
         <div className="vertical-line"></div>
         <div className="description">
           <h2>Créez votre compte</h2>
-          <p>Rejoignez Quiz App pour tester vos connaissances dans diverses matières.</p>
+          <p>Rejoignez MAITRISEZ pour tester vos connaissances dans diverses matières.</p>
         </div>
       </div>
     </div>

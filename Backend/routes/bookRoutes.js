@@ -6,7 +6,10 @@ import { fileURLToPath } from 'url';
 import Book from '../models/bookModel.js';
 import { requireAdmin } from '../controllers/authController.js';
 import { cacheMiddleware, delPattern } from '../utils/cache.js';
+import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
+import { escapeRegex } from '../utils/escapeRegex.js';
+import { getPagination, paginatedResponse } from '../utils/paginate.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -54,6 +57,7 @@ router.post('/books/upload', requireAdmin, upload.single('file'), catchAsync(asy
     delPattern('GET:/api/books');
     res.status(201).json(book);
   } catch (err) {
+    logger.error({ err, title: req.body?.title }, 'Book upload failed');
     if (req.file) fs.unlinkSync(req.file.path);
     res.status(500).json({ message: 'Upload failed' });
   }
@@ -62,10 +66,14 @@ router.post('/books/upload', requireAdmin, upload.single('file'), catchAsync(asy
 // List books — filter by moduleId, year, or keyword search (cached 5 min)
 router.get('/books', cacheMiddleware(), catchAsync(async (req, res) => {
   const filter = {};
-  if (req.query.moduleId) filter.moduleIds = req.query.moduleId;
-  if (req.query.search)   filter.title = { $regex: req.query.search, $options: 'i' };
-  const books = await Book.find(filter).populate('moduleIds').sort({ createdAt: -1 });
-  res.json(books);
+  if (req.query.moduleId) filter.moduleIds = String(req.query.moduleId);
+  if (req.query.search)   filter.title = { $regex: escapeRegex(String(req.query.search)), $options: 'i' };
+  const { skip, limit, page } = getPagination(req.query);
+  const [books, total] = await Promise.all([
+    Book.find(filter).populate('moduleIds', 'name year').sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Book.countDocuments(filter),
+  ]);
+  res.json(paginatedResponse(books, total, page, limit));
 }));
 
 const serveSafe = (filename) => {
@@ -81,8 +89,14 @@ router.get('/books/download/:id', catchAsync(async (req, res) => {
   const filePath = serveSafe(book.filename);
   if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk' });
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="${book.originalName}"`);
-  fs.createReadStream(filePath).pipe(res);
+  const safeName = (book.originalName || 'download.pdf').replace(/[^a-zA-Z0-9._-]/g, '_');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+  const stream = fs.createReadStream(filePath);
+  let sent = false;
+  const guard = () => { if (!sent) { sent = true; return true; } return false; };
+  stream.on('error', () => { if (guard()) { try { res.end(); } catch {} } });
+  req.on('close', () => stream.destroy());
+  stream.pipe(res);
 }));
 
 // Serve PDF file
@@ -93,7 +107,12 @@ router.get('/books/file/:id', catchAsync(async (req, res) => {
   if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk' });
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="${book.originalName}"`);
-  fs.createReadStream(filePath).pipe(res);
+  const stream = fs.createReadStream(filePath);
+  let sent = false;
+  const guard = () => { if (!sent) { sent = true; return true; } return false; };
+  stream.on('error', () => { if (guard()) { try { res.end(); } catch {} } });
+  req.on('close', () => stream.destroy());
+  stream.pipe(res);
 }));
 
 // Delete book

@@ -1,40 +1,19 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useTranslation } from '../context/LanguageContext';
 import '../styles/componentstyle/footer.css';
-import { FaFacebook, FaLinkedin, FaTelegram } from 'react-icons/fa';
 
 export default function Footer() {
+  const { t } = useTranslation();
   return (
     <div className="footer">
       <div className="footer-content">
         <div className="footer-info">
-          <p>© {new Date().getFullYear()} Quiz App. Tous droits réservés.</p>
+          <p>{t('footer.copyright', { year: new Date().getFullYear() })}</p>
         </div>
-        <div className="footer-social">
-          <a
-            href="https://www.facebook.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="social-icon"
-          >
-            <FaFacebook />
-          </a>
-          <a
-            href="https://www.linkedin.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="social-icon"
-          >
-            <FaLinkedin />
-          </a>
-          <a
-            href="https://t.me"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="social-icon"
-          >
-            <FaTelegram />
-          </a>
+        <div className="footer-links">
+          <Link to="/terms" className="footer-link">Conditions</Link>
+          <Link to="/privacy" className="footer-link">Confidentialité</Link>
         </div>
       </div>
     </div>

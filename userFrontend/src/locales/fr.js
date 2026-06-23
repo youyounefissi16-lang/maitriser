@@ -1,5 +1,6 @@
 const fr = {
   // Nav
+  'nav.dashboard': 'Tableau de bord',
   'nav.qcm': 'QCM',
   'nav.mockExam': 'Examen Blanc',
   'nav.oral': 'Examens Oraux',
@@ -20,7 +21,7 @@ const fr = {
   'nav.language': 'Langue',
 
   // Home
-  'home.hero.title': 'Maîtrisez: Votre Voie vers l\'Excellence Médicale',
+  'home.hero.title': 'MAITRISEZ: Votre Voie vers l\'Excellence Médicale',
   'home.hero.subtitle': 'Réussissez vos examens, maîtrisez vos cours et pratiquez des compétences vitales avec notre plateforme tout-en-un pour étudiants en médecine.',
   'home.hero.cta': 'Commencez votre essai gratuit',
   'home.features.quiz': 'Quiz Interactifs ▸',
@@ -60,7 +61,7 @@ const fr = {
   'quiz.case': 'Cas clinique',
 
   // Mock Exam
-  'mock.title': 'Examen Blanc — QuizApp',
+  'mock.title': 'Examen Blanc — MAITRISEZ',
   'mock.noQuestions': 'Aucune question disponible pour cet examen.',
   'mock.back': 'Retour aux QCM',
   'mock.question': 'Question',
@@ -79,6 +80,24 @@ const fr = {
   'mock.explanation': 'Explication',
   'mock.case': 'Cas clinique — {title}',
 
+  // Quiz Card
+  'quizcard.selectAll': 'Sélectionnez toutes les réponses correctes',
+  'quizcard.submit': 'Soumettre la réponse',
+  'quizcard.submitting': 'Soumission…',
+  'quizcard.correctAnswer': 'Réponse correcte',
+  'quizcard.correctAnswers': 'Réponses correctes',
+  'quizcard.explanation': 'Explication',
+  'quizcard.studyMode': 'Mode étude — Cliquez sur une réponse pour voir immédiatement si elle est correcte',
+  'quizcard.back': 'Retour aux QCM',
+  'quizcard.error.verify': 'Erreur de vérification.',
+  'quizcard.error.submit': 'Échec de la soumission.',
+  'quizcard.error.submitRetry': 'Échec de la soumission. Veuillez réessayer.',
+  'quizcard.error.bookmark': 'Erreur lors de la mise à jour du favori',
+  'quizcard.error.network': 'Erreur réseau',
+  'quizcard.bookmark.added': 'Ajouté aux favoris',
+  'quizcard.bookmark.removed': 'Retiré des favoris',
+  'quizcard.warning.select': 'Sélectionnez au moins une réponse.',
+
   // Profile
   'profile.title': 'Mon Profil',
   'profile.name': 'Nom',
@@ -92,6 +111,18 @@ const fr = {
   'profile.changePwd': 'Changer le mot de passe',
   'profile.pwdChanged': 'Mot de passe changé avec succès',
   'profile.error': 'Erreur',
+  'profile.nameRequired': 'Le nom est requis',
+  'profile.fillAllFields': 'Remplissez tous les champs',
+  'profile.passwordMinLength': 'Le nouveau mot de passe doit contenir au moins 6 caractères',
+
+  // Login
+  'login.title': 'Bon retour',
+  'login.subtitle': 'Connectez-vous pour continuer votre parcours.',
+  'login.syncing': 'Synchronisation du compte…',
+  'login.syncFailed': 'Échec de la synchronisation',
+  'login.retry': 'Réessayer',
+  'login.signOut': 'Se déconnecter',
+  'login.checking': 'Vérification du compte…',
 
   // General
   'loading': 'Chargement…',
@@ -100,6 +131,59 @@ const fr = {
   'cancel': 'Annuler',
   'delete': 'Supprimer',
   'confirm': 'Confirmer',
+  'pagination.prev': '← Précédent',
+  'pagination.next': 'Suivant →',
+  'pagination.page': 'Page {page} / {pages}',
+  'footer.copyright': '© {year} MAITRISEZ. Tous droits réservés.',
+  'notFound.title': 'Page introuvable',
+  'notFound.message': 'La page que vous cherchez n\'existe pas.',
+  'notFound.back': 'Retour à l\'accueil',
+
+  // Dashboard
+  'dashboard.greeting.morning': 'Bonjour',
+  'dashboard.greeting.afternoon': 'Bon après-midi',
+  'dashboard.greeting.evening': 'Bonsoir',
+  'dashboard.welcome': 'Bon retour !',
+  'dashboard.subtitle': 'Voici un aperçu de vos progrès.',
+  'dashboard.stats.total': 'Questions Répondues',
+  'dashboard.stats.correct': 'Correctes',
+  'dashboard.stats.accuracy': 'Précision',
+  'dashboard.stats.streak': 'Meilleure Série',
+  'dashboard.empty.title': 'Commencez votre voyage',
+  'dashboard.empty.desc': 'Vous n\'avez pas encore passé de quiz. Commencez un quiz pour suivre vos progrès ici.',
+  'dashboard.empty.cta': 'Commencer un Quiz',
+  'dashboard.quickActions': 'Actions Rapides',
+  'dashboard.quickActions.quiz': 'QCM',
+  'dashboard.quickActions.quiz.desc': 'Entraînez-vous avec des QCM',
+  'dashboard.quickActions.mock': 'Examen Blanc',
+  'dashboard.quickActions.mock.desc': 'Simulez les conditions d\'examen',
+  'dashboard.quickActions.voice': 'Examen Oral',
+  'dashboard.quickActions.voice.desc': 'Pratiquez les examens oraux',
+  'dashboard.quickActions.library': 'Bibliothèque',
+  'dashboard.quickActions.library.desc': 'Parcourez les manuels',
+  'dashboard.quickActions.bookmarks': 'Favoris',
+  'dashboard.quickActions.bookmarks.desc': 'Revoir les questions sauvegardées',
+  'dashboard.recent': 'Activité Récente',
+  'dashboard.recent.none': 'Aucune activité récente',
+  'dashboard.seeAll': 'Voir tous les résultats',
+
+  // Case Exam
+  'quizcase.notFound': 'Cas clinique introuvable',
+  'quizcase.done': 'Terminé',
+
+  // Contact
+  'contact.title': 'Nous Contacter',
+  'contact.name': 'Nom :',
+  'contact.email': 'Email :',
+  'contact.message': 'Message :',
+  'contact.send': 'Envoyer le message',
+  'contact.sending': 'Envoi en cours…',
+  'contact.success': 'Votre message a été envoyé avec succès !',
+  'contact.error.name': 'Le nom est requis',
+  'contact.error.email': "L'email est requis",
+  'contact.error.emailInvalid': "L'email est invalide",
+  'contact.error.message': 'Le message est requis',
+  'contact.error.general': "Une erreur est survenue lors de l'envoi du message.",
 };
 
 export default fr;

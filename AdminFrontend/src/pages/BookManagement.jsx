@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { authFetch } from '../config/authFetch';
 import { API_BASE_URL } from '../config/api';
 import { FaTrash, FaBook } from 'react-icons/fa';
 import { useToast } from '../components/Toast';
+import { useSound } from '../context/SoundContext';
 import ConfirmModal from '../components/ConfirmModal';
 import Spinner from '../components/Spinner';
+import { logger } from '../utils/logger';
 import '../styles/sharedAdmin.css';
 
 const YEARS = [1, 2, 3, 4, 5, 6, 7];
 
 const BookManagement = () => {
   const notify = useToast();
+  const play = useSound();
   const [modules, setModules]           = useState([]);
   const [filterYear, setFilterYear]     = useState('');
   const [books, setBooks]               = useState([]);
@@ -21,6 +24,8 @@ const BookManagement = () => {
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [submitting, setSubmitting]     = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => { fetchModules(); fetchBooks(); }, []);
 
@@ -30,17 +35,18 @@ const BookManagement = () => {
       if (!res.ok) { setError('Failed to load modules'); return; }
       const data = await res.json();
       setModules(data);
-    } catch { setError('Failed to load modules'); }
+    } catch (err) { logger.error({ err }, 'BookManagement fetchModules failed'); setError('Failed to load modules'); }
   };
 
   const fetchBooks = async () => {
     try {
       setLoading(true);
       const res  = await authFetch('/api/books');
+      if (!res.ok) throw new Error('Failed');
       const data = await res.json();
-      setBooks(data);
+      setBooks(Array.isArray(data) ? data : []);
       setError('');
-    } catch { setError('Failed to load books'); }
+    } catch (err) { logger.error({ err }, 'BookManagement fetchBooks failed'); setError('Failed to load books'); }
     finally { setLoading(false); }
   };
 
@@ -51,6 +57,8 @@ const BookManagement = () => {
   };
 
   const handleUpload = async () => {
+    play('submit');
+    if (submittingRef.current) return;
     if (!title || !file || selectedModuleIds.length === 0)
       return notify('Please enter a title, select at least one module, and choose a PDF.', 'warning');
 
@@ -59,6 +67,7 @@ const BookManagement = () => {
     formData.append('moduleIds', JSON.stringify(selectedModuleIds));
     formData.append('file', file);
 
+    submittingRef.current = true;
     try {
       setUploading(true);
       const res = await authFetch('/api/books/upload', { method: 'POST', body: formData });
@@ -71,20 +80,27 @@ const BookManagement = () => {
         const err = await res.json();
         notify(`Upload failed: ${err.message}`, 'error');
       }
-    } catch { notify('Upload failed', 'error'); }
-    finally { setUploading(false); }
+    } catch (err) { logger.error({ err }, 'BookManagement upload failed'); notify('Upload failed', 'error'); }
+    finally { setUploading(false); submittingRef.current = false; }
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
+    play('delete');
+    if (!deleteTarget || submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
     try {
       const res = await authFetch(`/api/books/${deleteTarget._id}`, { method: 'DELETE' });
       if (res.ok) { fetchBooks(); notify('Book deleted', 'success'); }
       else notify('Failed to delete book', 'error');
     } catch (err) {
+      logger.error({ err }, 'BookManagement confirmDelete failed');
       notify('Network error', 'error');
+    } finally {
+      setDeleteTarget(null);
+      submittingRef.current = false;
+      setSubmitting(false);
     }
-    setDeleteTarget(null);
   };
 
   const visibleModules = filterYear
@@ -169,6 +185,7 @@ const BookManagement = () => {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
         confirmText="Delete"
+        confirmDisabled={submitting}
       />
     </div>
   );

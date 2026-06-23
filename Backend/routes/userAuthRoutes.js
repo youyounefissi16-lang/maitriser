@@ -1,19 +1,16 @@
 import express from 'express';
-import { body, validationResult } from 'express-validator';
+import crypto from 'crypto';
+import { body } from 'express-validator';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
 import User from '../models/userModel.js';
 import { verifyToken } from '../controllers/authController.js';
 import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
+import { validatePassword } from '../middleware/passwordValidator.js';
+import { addToBlacklist } from '../middleware/jwtBlacklist.js';
+import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
-
-const handleValidation = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ message: errors.array()[0].msg });
-  next();
-};
 
 // POST /api/users/register — self-registration for students
 router.post(
@@ -22,9 +19,9 @@ router.post(
     body('userId').trim().notEmpty().isAlphanumeric().withMessage('userId must be alphanumeric'),
     body('name').trim().notEmpty().withMessage('Name is required'),
     body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
-    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters').custom(validatePassword),
   ],
-  handleValidation,
+  validate,
   async (req, res) => {
     const { userId, name, email, password } = req.body;
     try {
@@ -56,7 +53,7 @@ router.post(
     body('userId').trim().notEmpty().isAlphanumeric().withMessage('Invalid userId'),
     body('password').notEmpty().withMessage('Password is required'),
   ],
-  handleValidation,
+  validate,
   async (req, res) => {
     const { userId, password } = req.body;
     try {
@@ -99,7 +96,7 @@ router.put(
     body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
     body('email').optional().isEmail().normalizeEmail().withMessage('Valid email is required'),
   ],
-  handleValidation,
+  validate,
   async (req, res) => {
     try {
       const { name, email } = req.body;
@@ -124,17 +121,41 @@ router.put(
   verifyToken,
   [
     body('currentPassword').notEmpty().withMessage('Current password is required'),
-    body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters'),
+    body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters').custom(validatePassword),
   ],
-  handleValidation,
+  validate,
   catchAsync(async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    const isMatch = await bcrypt.compare(req.body.currentPassword, user.password);
+    const isMatch = await user.comparePassword(req.body.currentPassword);
     if (!isMatch) return res.status(400).json({ message: 'Current password is incorrect' });
     user.password = req.body.newPassword;
     await user.save();
+    const authHeader = req.headers['authorization'];
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        addToBlacklist(token, decoded.exp * 1000);
+      } catch {}
+    }
     res.json({ message: 'Password changed successfully' });
+  })
+);
+
+// DELETE /api/users/me — self-service account deletion (GDPR)
+router.delete(
+  '/users/me',
+  verifyToken,
+  catchAsync(async (req, res) => {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    user.deletedAt = new Date();
+    user.email = `deleted-${user._id}@placeholder.maitrisez.com`;
+    user.name = 'Deleted User';
+    user.password = crypto.randomBytes(32).toString('hex');
+    await user.save();
+    res.json({ message: 'Account deleted successfully' });
   })
 );
 

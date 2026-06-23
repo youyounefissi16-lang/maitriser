@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { authFetch } from '../config/authFetch';
 import { FaTrash, FaEdit, FaImage, FaPlus, FaTimes } from 'react-icons/fa';
 import { API_BASE_URL } from '../config/api';
-import { getToken } from '../utils/tokenStore';
 import { useToast } from '../components/Toast';
+import { useSound } from '../context/SoundContext';
 import ConfirmModal from '../components/ConfirmModal';
 import Spinner from '../components/Spinner';
+import { logger } from '../utils/logger';
 import '../styles/sharedAdmin.css';
 
 const YEARS = [1, 2, 3, 4, 5, 6, 7];
@@ -20,6 +21,7 @@ const emptyForm = () => ({
 
 const VoiceExamManagement = () => {
   const notify = useToast();
+  const play = useSound();
   const [modules, setModules]               = useState([]);
   const [filteredModules, setFilteredModules] = useState([]);
   const [exams, setExams]                   = useState([]);
@@ -33,6 +35,8 @@ const VoiceExamManagement = () => {
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState('');
   const [deleteTarget, setDeleteTarget]     = useState(null);
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { fetchModules(); fetchExams(); }, []);
 
@@ -56,8 +60,9 @@ const VoiceExamManagement = () => {
     try {
       const res = await authFetch('/api/modules');
       if (!res.ok) { setError('Failed to load modules'); return; }
-      setModules(await res.json());
-    } catch { setError('Failed to load modules'); }
+      const modData = await res.json();
+      setModules(Array.isArray(modData) ? modData : []);
+    } catch (err) { logger.error({ err }, 'VoiceExamManagement fetchModules failed'); setError('Failed to load modules'); }
   };
 
   const fetchExams = async () => {
@@ -67,9 +72,11 @@ const VoiceExamManagement = () => {
     try {
       setLoading(true);
       const res = await authFetch(url);
-      setExams(await res.json());
+      if (!res.ok) throw new Error('Failed');
+      const examData = await res.json();
+      setExams(Array.isArray(examData) ? examData : []);
       setError('');
-    } catch { setError('Failed to load exams'); }
+    } catch (err) { logger.error({ err }, 'VoiceExamManagement fetchExams failed'); setError('Failed to load exams'); }
     finally { setLoading(false); }
   };
 
@@ -142,6 +149,8 @@ const VoiceExamManagement = () => {
   // ── Submit ─────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
+    play('submit');
+    if (submittingRef.current) return;
     const { title, moduleId, clinicalCasePrompt, questions } = form;
     if (!title || !moduleId || !clinicalCasePrompt)
       return notify('Title, module, and case prompt are required', 'warning');
@@ -161,6 +170,9 @@ const VoiceExamManagement = () => {
       existingImages,
     });
 
+    submittingRef.current = true;
+    setSubmitting(true);
+
     try {
       if (hasFiles) {
         const fd = new FormData();
@@ -171,15 +183,10 @@ const VoiceExamManagement = () => {
         fd.append('existingImages', JSON.stringify(existingImages));
         newImages.forEach((f) => fd.append('images', f));
 
-        const token = getToken();
-        const res = await fetch(`${API_BASE_URL}${url}`, {
-          method,
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          body: fd,
-        });
-        const data = await res.json();
+        const res = await authFetch(url, { method, body: fd });
+        const data = res.ok ? await res.json() : null;
         if (res.ok) { fetchExams(); resetForm(); notify(editId ? 'Exam updated' : 'Exam created', 'success'); }
-        else notify(`Failed: ${data.message}`, 'error');
+        else notify(`Failed: ${data?.message || 'Unknown error'}`, 'error');
       } else {
         const res  = await authFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body });
         const data = await res.json();
@@ -187,16 +194,28 @@ const VoiceExamManagement = () => {
         else notify(`Failed: ${data.message}`, 'error');
       }
     } catch (err) {
+      logger.error({ err }, 'VoiceExamManagement handleSubmit failed');
       notify('Network error', 'error');
-    }
+    } finally { submittingRef.current = false; setSubmitting(false); }
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    const res = await authFetch(`/api/voice-exams/${deleteTarget._id}`, { method: 'DELETE' });
-    if (res.ok) { fetchExams(); notify('Exam deleted', 'success'); }
-    else notify('Failed to delete', 'error');
-    setDeleteTarget(null);
+    play('delete');
+    if (!deleteTarget || submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      const res = await authFetch(`/api/voice-exams/${deleteTarget._id}`, { method: 'DELETE' });
+      if (res.ok) { fetchExams(); notify('Exam deleted', 'success'); }
+      else notify('Failed to delete', 'error');
+    } catch (err) {
+      logger.error({ err }, 'VoiceExamManagement confirmDelete failed');
+      notify('Network error', 'error');
+    } finally {
+      setDeleteTarget(null);
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
   };
 
   const startEdit = (exam) => {
@@ -275,7 +294,7 @@ const VoiceExamManagement = () => {
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
               {existingImages.map((img, i) => (
                 <div key={i} style={{ position: 'relative', display: 'inline-block' }}>
-                  <img src={`${API_BASE_URL}/api/voice-exam-images/${img}`} alt=""
+                  <img src={`${API_BASE_URL}/api/voice-exam-images/${img}`} alt="" loading="lazy"
                     style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--dc-border)' }}
                   />
                   <button type="button" onClick={() => removeExistingImage(img)} style={{
@@ -291,7 +310,7 @@ const VoiceExamManagement = () => {
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
               {previews.map((p, i) => (
                 <div key={i} style={{ position: 'relative', display: 'inline-block' }}>
-                  <img src={p} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--dc-border)' }} />
+                  <img src={p} alt="" loading="lazy" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--dc-border)' }} />
                   <button type="button" onClick={() => removeNewImage(i)} style={{
                     position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%',
                     background: 'var(--dc-highlight)', color: '#fff', border: 'none', cursor: 'pointer',
@@ -368,7 +387,7 @@ const VoiceExamManagement = () => {
         </button>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <button type="button" onClick={handleSubmit}>{editId ? 'Update' : 'Create'}</button>
+          <button type="button" onClick={handleSubmit} disabled={submitting}>{editId ? 'Update' : 'Create'}</button>
           {editId && <button type="button" onClick={resetForm}>Cancel</button>}
         </div>
       </div>
@@ -419,6 +438,7 @@ const VoiceExamManagement = () => {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
         confirmText="Delete"
+        confirmDisabled={submitting}
       />
     </div>
   );

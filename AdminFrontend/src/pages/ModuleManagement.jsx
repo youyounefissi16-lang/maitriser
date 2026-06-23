@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { authFetch } from '../config/authFetch';
 import { FaTrash, FaEdit } from 'react-icons/fa';
 import { useToast } from '../components/Toast';
+import { useSound } from '../context/SoundContext';
 import ConfirmModal from '../components/ConfirmModal';
 import Spinner from '../components/Spinner';
+import { logger } from '../utils/logger';
 import '../styles/sharedAdmin.css';
 
 const YEARS = [1, 2, 3, 4, 5, 6, 7];
 
 const ModuleManagement = () => {
   const notify = useToast();
+  const play = useSound();
   const [modules, setModules]       = useState([]);
   const [filterYear, setFilterYear] = useState('');
   const [name, setName]             = useState('');
@@ -22,17 +25,20 @@ const ModuleManagement = () => {
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchModules = async () => {
     const url = filterYear ? `/api/modules?year=${filterYear}` : '/api/modules';
     try {
       setLoading(true);
       const res  = await authFetch(url);
+      if (!res.ok) throw new Error('Failed');
       const data = await res.json();
       if (Array.isArray(data)) setModules(data);
       else setModules([]);
       setError('');
-    } catch (e) { setModules([]); setError('Failed to load modules'); }
+    } catch (e) { logger.error({ err: e }, 'ModuleManagement fetchModules failed'); setModules([]); setError('Failed to load modules'); }
     finally { setLoading(false); }
   };
 
@@ -41,7 +47,11 @@ const ModuleManagement = () => {
   const removeCourse = (idx) => setCourses((prev) => prev.filter((_, i) => i !== idx));
 
   const handleSubmit = async () => {
+    play('submit');
+    if (submittingRef.current) return;
     if (!name || !year) return notify('Name and year are required', 'warning');
+    submittingRef.current = true;
+    setSubmitting(true);
     try {
       const method = editId ? 'PUT' : 'POST';
       const url    = editId ? `/api/modules/${editId}` : '/api/modules';
@@ -53,20 +63,27 @@ const ModuleManagement = () => {
       if (res.ok) { fetchModules(); resetForm(); notify(editId ? 'Module updated' : 'Module created', 'success'); }
       else notify('Operation failed', 'error');
     } catch (err) {
+      logger.error({ err }, 'ModuleManagement handleSubmit failed');
       notify('Network error', 'error');
-    }
+    } finally { submittingRef.current = false; setSubmitting(false); }
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
+    play('delete');
+    if (!deleteTarget || submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
     try {
       const res = await authFetch(`/api/modules/${deleteTarget._id}`, { method: 'DELETE' });
       if (res.ok) { fetchModules(); notify('Module deleted', 'success'); }
       else notify('Failed to delete', 'error');
     } catch (err) {
+      logger.error({ err }, 'ModuleManagement confirmDelete failed');
       notify('Network error', 'error');
     }
     setDeleteTarget(null);
+    submittingRef.current = false;
+    setSubmitting(false);
   };
 
   const startEdit = (mod) => {
@@ -88,10 +105,10 @@ const ModuleManagement = () => {
     try {
       setCsvImporting(true);
       const res    = await authFetch('/api/import-modules-csv', { method: 'POST', body: formData });
-      const result = await res.json();
-      notify(result.message, res.ok ? 'success' : 'error');
+      const result = res.ok ? await res.json() : null;
+      notify(result?.message || 'Import finished', res.ok ? 'success' : 'error');
       fetchModules();
-    } catch { notify('Failed to import CSV', 'error'); }
+    } catch (err) { logger.error({ err }, 'ModuleManagement CSV import failed'); notify('Failed to import CSV', 'error'); }
     finally { setCsvImporting(false); e.target.value = ''; }
   };
 
@@ -143,7 +160,7 @@ const ModuleManagement = () => {
           </div>
 
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="submit">{editId ? 'Update' : 'Add Module'}</button>
+            <button type="submit" disabled={submitting}>{editId ? 'Update' : 'Add Module'}</button>
             {editId && <button type="button" onClick={resetForm}>Cancel</button>}
           </div>
         </form>
@@ -198,6 +215,7 @@ const ModuleManagement = () => {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
         confirmText="Delete"
+        confirmDisabled={submitting}
       />
     </div>
   );

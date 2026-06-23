@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast.jsx';
 import { useTranslation } from '../context/LanguageContext';
 import Pagination from '../components/Pagination';
 import { shuffle } from '../utils/shuffle';
+import { useSound } from '../context/SoundContext';
 import '../styles/teal-theme.css';
 
 const YEARS = [1, 2, 3, 4, 5, 6, 7];
@@ -29,11 +30,13 @@ const QuizPage = () => {
   const [searchQuery, setSearchQuery]             = useState('');
   const [page, setPage]                           = useState(1);
   const [totalPages, setTotalPages]               = useState(1);
+  const [starting, setStarting]                   = useState(false);
   const navigate = useNavigate();
   const notify = useToast();
   const { t } = useTranslation();
+  const play = useSound();
 
-  useEffect(() => { document.title = 'QCM — QuizApp'; }, []);
+  useEffect(() => { document.title = 'QCM — MAITRISEZ'; }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -138,15 +141,19 @@ const QuizPage = () => {
   };
 
   const handleStartMockExam = async () => {
+    if (starting) return;
+    setStarting(true);
     try {
       const caseIds = [...new Set(filteredQuizzes.filter((q) => q.caseId).map((q) => q.caseId._id || q.caseId))];
       const caseMap = {};
-      for (const cid of caseIds) {
-        try {
-          const res = await fetchWithAuth(`${API_BASE_URL}/api/cases/${cid}`);
-          if (res.ok) caseMap[cid] = await res.json();
-        } catch { /* skip failed case fetch */ }
-      }
+      const caseResults = await Promise.allSettled(
+        caseIds.map((cid) =>
+          fetchWithAuth(`${API_BASE_URL}/api/cases/${cid}`).then((res) =>
+            res.ok ? res.json().then((d) => ({ cid, d })) : null
+          )
+        )
+      );
+      caseResults.forEach((r) => { if (r.status === 'fulfilled' && r.value) caseMap[r.value.cid] = r.value.d; });
       const blocks = [];
       const seen = new Set();
       for (const quiz of filteredQuizzes) {
@@ -169,10 +176,11 @@ const QuizPage = () => {
       }
       const count = Math.min(Math.max(examCount, 1), expanded.length);
       const selected = distributeQuizzes(expanded, count, selectionCriteria);
+      play('start');
       navigate('/mock-exam', { state: { quizzes: selected, count: selected.length, examTimer, casesExpanded: true } });
     } catch {
       notify('Erreur lors du chargement des cas.', 'error');
-    }
+    } finally { setStarting(false); }
   };
 
   return (
@@ -237,7 +245,7 @@ const QuizPage = () => {
                     <option value="per-module">{t('quiz.criteria.perModule')}</option>
                     <option value="per-year">{t('quiz.criteria.perYear')}</option>
                   </select>
-                  <button type="button" className="btn-primary exam-start-btn" onClick={handleStartMockExam}>{t('quiz.startMock')}</button>
+                  <button type="button" className="btn-primary exam-start-btn" onClick={handleStartMockExam} disabled={starting}>{starting ? t('quiz.starting', 'Démarrage...') : t('quiz.startMock')}</button>
                 </div>
               </div>
             )}

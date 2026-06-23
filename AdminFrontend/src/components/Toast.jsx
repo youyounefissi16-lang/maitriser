@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { playSound } from '../utils/sound';
 
 const ToastContext = createContext();
 
@@ -8,6 +9,9 @@ export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
   const addToast = useCallback((message, type = 'info', duration = 4000) => {
+    if (type === 'success') playSound('success');
+    else if (type === 'error') playSound('error');
+    else if (type === 'warning') playSound('warning');
     const id = Date.now() + Math.random();
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), duration);

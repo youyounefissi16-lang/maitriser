@@ -27,13 +27,13 @@ const HelpPage = () => {
         <h2>Questions fréquentes</h2>
         <ul>
           <li className='text'><strong>Comment réinitialiser mon score ?</strong> Le score et l'historique ne peuvent pas être réinitialisés.</li>
-          <li className='text'><strong>Comment contacter le support ?</strong> Vous pouvez nous contacter par email à support@quizapp.com.</li>
+          <li className='text'><strong>Comment contacter le support ?</strong> Vous pouvez nous contacter par email à support@maitrisez.com.</li>
         </ul>
       </section>
 
       <section className="section">
         <h2>Contacter le support</h2>
-        <p className='text'>Si vous avez des problèmes ou des questions, n'hésitez pas à nous contacter à <a href="mailto:support@quizapp.com">support@quizapp.com</a>.</p>
+        <p className='text'>Si vous avez des problèmes ou des questions, n'hésitez pas à nous contacter à <a href="mailto:support@maitrisez.com">support@maitrisez.com</a>.</p>
       </section>
       </div>
     </div>

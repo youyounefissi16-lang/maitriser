@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axiosAdmin from '../config/axiosAdmin';
+import { logger } from '../utils/logger';
 import '../styles/modal.css';
 
 const AddUserModal = ({ setShowModal, fetchUsers }) => {
@@ -33,7 +34,7 @@ const AddUserModal = ({ setShowModal, fetchUsers }) => {
       }
     } catch (error) {
       const msg = error.response?.data?.message || 'Error adding user.';
-      console.warn(msg);
+      logger.error({ err: error }, `AddUserModal failed: ${msg}`);
     } finally {
       setLoading(false);
     }

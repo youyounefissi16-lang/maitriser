@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { ClerkProvider, useAuth } from "@clerk/react";
 import Home from './pages/Home';
 import Header from './components/Header';
@@ -8,14 +8,18 @@ import FooterPage from './components/Footer.jsx';
 import ProtectedRoute from './components/protectedRoute';
 import { ToastProvider } from './components/Toast.jsx';
 import { LanguageProvider, useTranslation } from './context/LanguageContext';
+import { SoundProvider } from './context/SoundContext';
+import CookieConsent from './components/CookieConsent';
 import axios from 'axios';
 import { setToken, setTokenGetter } from './utils/tokenStore';
+import { logger } from './utils/logger';
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
 const Help = lazy(() => import('./pages/Help'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
 const QuizPage = lazy(() => import('./pages/quizPage.jsx'));
 const MockExam = lazy(() => import('./pages/MockExam.jsx'));
 const CaseExam = lazy(() => import('./pages/CaseExam.jsx'));
@@ -27,8 +31,13 @@ const BookmarksPage = lazy(() => import('./pages/BookmarksPage.jsx'));
 const ReviewPage = lazy(() => import('./pages/ReviewPage.jsx'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
 const NotFound = lazy(() => import('./pages/NotFound.jsx'));
-const Login = lazy(() => import('./pages/Login'));
+const Login = lazy(() => import('./pages/login'));
 const Signup = lazy(() => import('./pages/Signup'));
+const Terms = lazy(() => import('./pages/Terms'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 const ClerkAxiosSetup = ({ children }) => {
   const { getToken, isSignedIn, isLoaded } = useAuth();
@@ -53,7 +62,7 @@ const ClerkAxiosSetup = ({ children }) => {
       if (aborted) return;
       if (token) {
         setToken(token);
-        getTokenRef.current().then((t) => { if (t) setToken(t); }).catch(() => {});
+        getTokenRef.current().then((t) => { if (t) setToken(t); }).catch((err) => { logger.error({ err }, 'App initial token refresh failed'); });
         setReady(true);
       } else if (!isSignedIn) {
         setReady(true);
@@ -71,7 +80,7 @@ const ClerkAxiosSetup = ({ children }) => {
     });
     const refreshInterval = setInterval(async () => {
       if (aborted) return;
-      getTokenRef.current().then((token) => { if (token) setToken(token); }).catch(() => {});
+      getTokenRef.current().then((token) => { if (token) setToken(token); }).catch((err) => { logger.error({ err }, 'App refreshInterval token refresh failed'); });
     }, 30 * 1000);
     return () => {
       aborted = true;
@@ -95,11 +104,11 @@ const AppContent = () => {
   const location = useLocation();
   const isHome = location.pathname === '/';
   const { isSignedIn } = useAuth();
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+  const [isDarkMode, setIsDarkMode] = useState(() => { try { return localStorage.getItem('darkMode') === 'true'; } catch { return false; } });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
-    localStorage.setItem('darkMode', isDarkMode);
+    try { localStorage.setItem('darkMode', isDarkMode); } catch { /* ignore */ }
   }, [isDarkMode]);
 
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
@@ -109,20 +118,28 @@ const AppContent = () => {
 
   return (
     <LanguageProvider>
+    <SoundProvider>
     <ToastProvider>
-    <div style={isHome ? {} : { background: 'linear-gradient(135deg, var(--teal-dark, #0C4A4A) 0%, var(--teal-deeper, #0B3D3D) 100%)', minHeight: '100vh' }}>
-      {isHome ? null : isSignedIn ? <Header2 toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} /> : <Header toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />}
+      <div style={isHome ? {} : { background: 'linear-gradient(135deg, var(--teal-dark, #0C4A4A) 0%, var(--teal-deeper, #0B3D3D) 100%)', minHeight: '100vh' }}>
+        <CookieConsent />
+        {isHome ? null : isSignedIn ? <Header2 toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} /> : <Header toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />}
 
       <Suspense fallback={<Fallback />}>
       <Routes>
-        <Route path="/"         element={<Home toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />} />
+        <Route path="/"         element={isSignedIn ? <Navigate to="/dashboard" replace /> : <Home toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />} />
         <Route path="/about"    element={<About />} />
         <Route path="/help"     element={<Help />} />
         <Route path="/contact"  element={<Contact />} />
         <Route path="/login"    element={<Login />} />
         <Route path="/signup"   element={<Signup />} />
+        <Route path="/terms"    element={<Terms />} />
+        <Route path="/privacy"  element={<Privacy />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard"   element={<DashboardPage />} />
           <Route path="/quizPage"    element={<QuizPage />} />
           <Route path="/mock-exam"   element={<MockExam />} />
           <Route path="/case-exam/:caseId" element={<CaseExam />} />
@@ -142,6 +159,7 @@ const AppContent = () => {
       {!isAppPath && !isHome && <FooterPage />}
     </div>
     </ToastProvider>
+    </SoundProvider>
     </LanguageProvider>
   );
 };
@@ -152,6 +170,9 @@ class ErrorBoundary extends React.Component {
     this.state = { error: null };
   }
   static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) {
+    logger.error({ err: error, info }, 'ErrorBoundary caught');
+  }
   render() {
     if (this.state.error) {
       return (

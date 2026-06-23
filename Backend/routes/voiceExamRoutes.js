@@ -7,7 +7,9 @@ import VoiceExamResult from '../models/voiceExamResultModel.js';
 import Module from '../models/moduleModel.js';
 import { requireAdmin } from '../controllers/authController.js';
 import { cacheMiddleware, delPattern } from '../utils/cache.js';
+import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
+import { getPagination, paginatedResponse } from '../utils/paginate.js';
 
 const router = express.Router();
 
@@ -37,13 +39,13 @@ const upload = multer({
 router.get('/voice-exams', cacheMiddleware(), catchAsync(async (req, res) => {
   const filter = {};
   if (req.query.year)     filter.year     = Number(req.query.year);
-  if (req.query.moduleId) filter.moduleId = req.query.moduleId;
-  const exams = await VoiceExam.find(filter).populate('moduleId').sort({ createdAt: -1 });
+  if (req.query.moduleId) filter.moduleId = String(req.query.moduleId);
+  const exams = await VoiceExam.find(filter).populate('moduleId', 'name year').sort({ createdAt: -1 });
   res.json(exams);
 }));
 
 router.get('/voice-exams/:id', catchAsync(async (req, res) => {
-  const exam = await VoiceExam.findById(req.params.id).populate('moduleId');
+  const exam = await VoiceExam.findById(req.params.id).populate('moduleId', 'name year');
   if (!exam) return res.status(404).json({ message: 'Voice exam not found' });
   res.json(exam);
 }));
@@ -81,7 +83,7 @@ router.put('/voice-exams/:id', requireAdmin, upload.array('images', 10), catchAs
   if (typeof questions === 'string') questions = JSON.parse(questions);
 
   let images = existingImages
-    ? (Array.isArray(existingImages) ? existingImages : JSON.parse(existingImages))
+    ? (Array.isArray(existingImages) ? existingImages : (() => { try { return JSON.parse(existingImages); } catch { return []; } })())
     : [];
   if (req.files && req.files.length > 0) {
     images = [...images, ...req.files.map((f) => f.filename)];
@@ -118,7 +120,8 @@ router.delete('/voice-exams/:id', requireAdmin, catchAsync(async (req, res) => {
 }));
 
 router.get('/voice-exam-images/:filename', (req, res) => {
-  const filepath = path.join(UPLOAD_DIR, req.params.filename);
+  const filename = path.basename(req.params.filename);
+  const filepath = path.join(UPLOAD_DIR, filename);
   if (!fs.existsSync(filepath)) return res.status(404).json({ message: 'Image not found' });
   res.sendFile(filepath);
 });
@@ -173,10 +176,14 @@ router.post('/voice-exams/:id/submit', catchAsync(async (req, res) => {
 router.get('/voice-exam-results/:userId', catchAsync(async (req, res) => {
   if (req.user.role !== 'admin' && req.user.userId !== req.params.userId)
     return res.status(403).json({ message: 'Access denied' });
-  const results = await VoiceExamResult.find({ userId: req.params.userId })
-    .populate('examId', 'title')
-    .sort({ createdAt: -1 });
-  res.json(results);
+  const { skip, limit, page } = getPagination(req.query);
+  const [results, total] = await Promise.all([
+    VoiceExamResult.find({ userId: req.params.userId })
+      .populate('examId', 'title')
+      .sort({ createdAt: -1 }).skip(skip).limit(limit),
+    VoiceExamResult.countDocuments({ userId: req.params.userId }),
+  ]);
+  res.json(paginatedResponse(results, total, page, limit));
 }));
 
 router.get('/voice-exam-results/:userId/:resultId', catchAsync(async (req, res) => {

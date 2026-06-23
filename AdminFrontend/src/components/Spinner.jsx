@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Spinner = ({ size = 24, text = 'Loading...' }) => (
+const Spinner = React.memo(({ size = 24, text = 'Loading...' }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 20, justifyContent: 'center' }}>
     <div style={{
       width: size, height: size,
@@ -12,6 +12,6 @@ const Spinner = ({ size = 24, text = 'Loading...' }) => (
     <span style={{ color: 'var(--dc-text)', fontSize: '0.9rem' }}>{text}</span>
     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
   </div>
-);
+));
 
 export default Spinner;

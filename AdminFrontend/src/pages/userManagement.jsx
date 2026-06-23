@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { authFetch } from '../config/authFetch';
 import { API_BASE_URL } from '../config/api';
+import { useToast } from '../components/Toast';
+import { useSound } from '../context/SoundContext';
+import { logger } from '../utils/logger';
 import '../styles/userManagement.css';
 import { FaSearch, FaEdit, FaTrash } from 'react-icons/fa';
 import AddUserModal from '../components/AddUserModal';
@@ -10,6 +13,8 @@ import Spinner from '../components/Spinner';
 import Pagination from '../components/Pagination';
 
 const UserManagement = () => {
+  const notify = useToast();
+  const play = useSound();
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -19,7 +24,8 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [notification, setNotification] = useState('');
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -35,6 +41,7 @@ const UserManagement = () => {
       setTotalPages(d.pages || 1);
       setError('');
     } catch (error) {
+      logger.error({ err: error }, 'UserManagement fetchUsers failed');
       setError(error.message);
     } finally {
       setLoading(false);
@@ -46,28 +53,52 @@ const UserManagement = () => {
   useEffect(() => {
     if (users.length > 0) {
       const result = users.filter(user =>
-        user.name.toLowerCase().includes(search.toLowerCase()) ||
-        user.email.toLowerCase().includes(search.toLowerCase())
+        (user.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (user.email || '').toLowerCase().includes(search.toLowerCase())
       );
       setFilteredUsers(result);
     }
   }, [search, users]);
 
+  const handleSync = async () => {
+    play('submit');
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      const res = await authFetch('/api/admin/sync-all-users', { method: 'POST' });
+      if (res.ok) {
+        const d = await res.json();
+        notify(`Clerk sync done: ${d.synced} user(s) imported`, 'success');
+        fetchUsers(1);
+      } else {
+        notify('Sync failed', 'error');
+      }
+    } catch (err) { logger.error({ err }, 'UserManagement sync-from-clerk failed'); notify('Sync failed', 'error'); }
+    finally { submittingRef.current = false; setSubmitting(false); }
+  };
+
   const handleDelete = async () => {
-    if (!deleteTarget) return;
+    play('delete');
+    if (!deleteTarget || submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
     try {
       const response = await authFetch(`/api/users/delete-user/${deleteTarget._id}`, { method: 'DELETE' });
       if (!response.ok) {
         const errorData = await response.json();
-        setNotification(`Error: ${errorData.message || 'Failed to delete user'}`);
+        notify(`Error: ${errorData.message || 'Failed to delete user'}`, 'error');
         return;
       }
       setUsers(prev => prev.filter(user => user._id !== deleteTarget._id));
-      setNotification('User deleted successfully');
-    } catch {
-      setNotification('An error occurred while deleting the user.');
+      notify('User deleted successfully', 'success');
+    } catch (err) {
+      logger.error({ err }, 'UserManagement handleDelete failed');
+      notify('An error occurred while deleting the user.', 'error');
     } finally {
       setDeleteTarget(null);
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   };
 
@@ -85,29 +116,12 @@ const UserManagement = () => {
 
   return (
     <div className="user-management-container">
-      {notification && (
-        <div className={`error-banner`} style={{ background: notification.startsWith('Error') ? '#fdecea' : '#e8f5e9', borderColor: notification.startsWith('Error') ? '#f5c6cb' : '#c8e6c9', color: notification.startsWith('Error') ? '#a94442' : '#2e7d32' }}>
-          {notification}
-          <button onClick={() => setNotification('')}>&times;</button>
-        </div>
-      )}
       {error && <div className="error-banner">{error}<button onClick={() => setError('')}>&times;</button></div>}
 
       <div className="header">
         <h2>User Management</h2>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" className="add-user-btn" onClick={async () => {
-            try {
-              const res = await authFetch('/api/admin/sync-all-users', { method: 'POST' });
-              if (res.ok) {
-                const d = await res.json();
-                setNotification(`Clerk sync done: ${d.synced} user(s) imported`);
-                fetchUsers(1);
-              } else {
-                setNotification('Sync failed');
-              }
-            } catch { setNotification('Sync failed'); }
-          }} style={{ background: '#0C4A4A' }}>
+          <button type="button" className="add-user-btn" onClick={handleSync} disabled={submitting} style={{ background: '#0C4A4A' }}>
             Sync from Clerk
           </button>
           <button type="button" className="add-user-btn" onClick={handleAddUser}>
@@ -169,6 +183,7 @@ const UserManagement = () => {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         confirmText="Delete"
+        confirmDisabled={submitting}
       />
     </div>
   );

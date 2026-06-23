@@ -1,5 +1,6 @@
 const en = {
   // Nav
+  'nav.dashboard': 'Dashboard',
   'nav.qcm': 'MCQs',
   'nav.mockExam': 'Mock Exam',
   'nav.oral': 'Oral Exams',
@@ -60,7 +61,7 @@ const en = {
   'quiz.case': 'Clinical Case',
 
   // Mock Exam
-  'mock.title': 'Mock Exam — QuizApp',
+  'mock.title': 'Mock Exam — MAITRISEZ',
   'mock.noQuestions': 'No questions available for this exam.',
   'mock.back': 'Back to MCQs',
   'mock.question': 'Question',
@@ -79,6 +80,24 @@ const en = {
   'mock.explanation': 'Explanation',
   'mock.case': 'Clinical Case — {title}',
 
+  // Quiz Card
+  'quizcard.selectAll': 'Select all correct answers',
+  'quizcard.submit': 'Submit Answer',
+  'quizcard.submitting': 'Submitting…',
+  'quizcard.correctAnswer': 'Correct answer',
+  'quizcard.correctAnswers': 'Correct answers',
+  'quizcard.explanation': 'Explanation',
+  'quizcard.studyMode': 'Study mode — Click an answer to see if it is correct',
+  'quizcard.back': 'Back to MCQs',
+  'quizcard.error.verify': 'Verification error.',
+  'quizcard.error.submit': 'Submission failed.',
+  'quizcard.error.submitRetry': 'Submission failed. Please try again.',
+  'quizcard.error.bookmark': 'Error updating bookmark',
+  'quizcard.error.network': 'Network error',
+  'quizcard.bookmark.added': 'Added to bookmarks',
+  'quizcard.bookmark.removed': 'Removed from bookmarks',
+  'quizcard.warning.select': 'Select at least one answer.',
+
   // Profile
   'profile.title': 'My Profile',
   'profile.name': 'Name',
@@ -92,6 +111,18 @@ const en = {
   'profile.changePwd': 'Change Password',
   'profile.pwdChanged': 'Password changed successfully',
   'profile.error': 'Error',
+  'profile.nameRequired': 'Name is required',
+  'profile.fillAllFields': 'Fill all fields',
+  'profile.passwordMinLength': 'New password must be at least 6 characters',
+
+  // Login
+  'login.title': 'Welcome Back',
+  'login.subtitle': 'Sign in to continue your learning journey.',
+  'login.syncing': 'Syncing your account...',
+  'login.syncFailed': 'Sync failed',
+  'login.retry': 'Retry',
+  'login.signOut': 'Sign out',
+  'login.checking': 'Checking account...',
 
   // General
   'loading': 'Loading…',
@@ -100,6 +131,59 @@ const en = {
   'cancel': 'Cancel',
   'delete': 'Delete',
   'confirm': 'Confirm',
+  'pagination.prev': '← Previous',
+  'pagination.next': 'Next →',
+  'pagination.page': 'Page {page} / {pages}',
+  'footer.copyright': '© {year} MAITRISEZ. All rights reserved.',
+  'notFound.title': 'Page Not Found',
+  'notFound.message': 'The page you are looking for does not exist.',
+  'notFound.back': 'Back to Home',
+
+  // Dashboard
+  'dashboard.greeting.morning': 'Good morning',
+  'dashboard.greeting.afternoon': 'Good afternoon',
+  'dashboard.greeting.evening': 'Good evening',
+  'dashboard.welcome': 'Welcome back!',
+  'dashboard.subtitle': 'Here\'s your learning overview.',
+  'dashboard.stats.total': 'Questions Done',
+  'dashboard.stats.correct': 'Correct',
+  'dashboard.stats.accuracy': 'Accuracy',
+  'dashboard.stats.streak': 'Best Streak',
+  'dashboard.empty.title': 'Start your journey',
+  'dashboard.empty.desc': 'You haven\'t taken any quizzes yet. Begin a quiz to track your progress here.',
+  'dashboard.empty.cta': 'Start a Quiz',
+  'dashboard.quickActions': 'Quick Actions',
+  'dashboard.quickActions.quiz': 'MCQ Quiz',
+  'dashboard.quickActions.quiz.desc': 'Practice with MCQs',
+  'dashboard.quickActions.mock': 'Mock Exam',
+  'dashboard.quickActions.mock.desc': 'Simulate exam conditions',
+  'dashboard.quickActions.voice': 'Voice Exam',
+  'dashboard.quickActions.voice.desc': 'Practice oral exams',
+  'dashboard.quickActions.library': 'Library',
+  'dashboard.quickActions.library.desc': 'Browse textbooks',
+  'dashboard.quickActions.bookmarks': 'Bookmarks',
+  'dashboard.quickActions.bookmarks.desc': 'Review saved questions',
+  'dashboard.recent': 'Recent Activity',
+  'dashboard.recent.none': 'No recent activity',
+  'dashboard.seeAll': 'See all results',
+
+  // Case Exam
+  'quizcase.notFound': 'Case not found',
+  'quizcase.done': 'Completed',
+
+  // Contact
+  'contact.title': 'Contact Us',
+  'contact.name': 'Name:',
+  'contact.email': 'Email:',
+  'contact.message': 'Message:',
+  'contact.send': 'Send Message',
+  'contact.sending': 'Sending...',
+  'contact.success': 'Your message has been sent successfully!',
+  'contact.error.name': 'Name is required',
+  'contact.error.email': 'Email is required',
+  'contact.error.emailInvalid': 'Invalid email address',
+  'contact.error.message': 'Message is required',
+  'contact.error.general': 'An error occurred while sending the message.',
 };
 
 export default en;

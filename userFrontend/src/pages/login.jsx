@@ -3,6 +3,9 @@ import { SignIn, useAuth, useClerk } from "@clerk/react";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { setToken } from '../utils/tokenStore';
+import { logger } from '../utils/logger';
+import { API_BASE_URL } from '../config/api';
+import { useTranslation } from '../context/LanguageContext';
 import '../styles/teal-theme.css';
 import '../styles/pagesStyle/login.css';
 
@@ -10,13 +13,14 @@ const Login = () => {
   const { isSignedIn, isLoaded, getToken } = useAuth();
   const { signOut } = useClerk();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [status, setStatus] = useState('idle');
   const synced = useRef(false);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || synced.current || status !== 'idle') return;
     let aborted = false;
-    localStorage.removeItem('userId');
+    try { localStorage.removeItem('userId'); } catch { /* ignore */ }
     setStatus('syncing');
     const sync = async () => {
       try {
@@ -33,15 +37,16 @@ const Login = () => {
         if (!token) throw new Error('No token');
         setToken(token);
         const res = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/api/auth/clerk-sync`,
+          `${API_BASE_URL}/api/auth/clerk-sync`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (aborted) return;
-        localStorage.setItem('userId', res.data.userId);
+        try { localStorage.setItem('userId', res.data.userId); } catch { /* ignore */ }
         synced.current = true;
         navigate('/', { replace: true });
-      } catch {
+      } catch (err) {
+        logger.error({ err }, 'Login sync failed');
         if (!aborted) setStatus('sync_failed');
       }
     };
@@ -49,23 +54,26 @@ const Login = () => {
     return () => { aborted = true; };
   }, [isLoaded, isSignedIn, status, getToken, navigate]);
 
-  if (!isLoaded) return <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>Loading...</div>;
+  if (!isLoaded) return (
+    <div className="page-teal login-page">
+      <div className="login-loading">{t('loading')}</div>
+    </div>
+  );
 
   if (isSignedIn) {
     return (
-      <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-        <div className="login-container" style={{ justifyContent: 'center', alignItems: 'center', height: 'auto', padding: 60 }}>
-          <div style={{ textAlign: 'center' }}>
-            {status === 'syncing' && <p>Syncing your account…</p>}
+      <div className="page-teal login-page">
+        <div className="login-container login-sync-container">
+          <div className="login-sync-inner">
+            {status === 'syncing' && <p>{t('login.syncing')}</p>}
             {status === 'sync_failed' && (
               <>
-                <p style={{ color: '#e74c3c', marginBottom: 16 }}>Sync failed</p>
-                <button className="login-btn" onClick={() => setStatus('idle')} style={{ marginBottom: 12 }}>Retry</button>
-                <br />
-                <button className="login-btn" style={{ background: '#888' }} onClick={() => signOut()}>Sign out</button>
+                <p className="login-sync-error">{t('login.syncFailed')}</p>
+                <button className="login-btn" onClick={() => setStatus('idle')}>{t('login.retry')}</button>
+                <button className="login-btn login-btn-secondary" onClick={() => signOut()}>{t('login.signOut')}</button>
               </>
             )}
-            {status === 'idle' && <p>Checking account…</p>}
+            {status === 'idle' && <p>{t('login.checking')}</p>}
           </div>
         </div>
       </div>
@@ -73,15 +81,18 @@ const Login = () => {
   }
 
   return (
-    <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+    <div className="page-teal login-page">
       <div className="login-container">
-        <div className="login-form">
+        <div className="login-form" role="main" aria-label="Formulaire de connexion">
           <SignIn signUpUrl="/signup" />
+          <p style={{ textAlign: 'center', marginTop: 16 }}>
+            <a href="/forgot-password" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Mot de passe oublié ?</a>
+          </p>
         </div>
         <div className="vertical-line"></div>
         <div className="description">
-          <h2>Welcome Back</h2>
-          <p>Sign in to continue your learning journey.</p>
+          <h2>{t('login.title')}</h2>
+          <p>{t('login.subtitle')}</p>
         </div>
       </div>
     </div>

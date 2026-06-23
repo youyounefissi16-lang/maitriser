@@ -3,6 +3,7 @@ import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { refreshToken } from '../utils/tokenStore';
 import { SkeletonCard, SkeletonFilters } from '../components/LoadingSkeleton';
 import { useToast } from '../components/Toast';
+import { logger } from '../utils/logger';
 import '../styles/teal-theme.css';
 
 const YEARS = [1, 2, 3, 4, 5, 6, 7];
@@ -22,6 +23,7 @@ const BooksPage = () => {
   }, []);
   const [books, setBooks]                       = useState([]);
   const [openBook, setOpenBook]                 = useState(null);
+  const [downloading, setDownloading]           = useState(null);
   const [loadingModules, setLoadingModules]     = useState(true);
   const [loadingBooks, setLoadingBooks]         = useState(true);
   const [modulesError, setModulesError]         = useState(null);
@@ -33,7 +35,11 @@ const BooksPage = () => {
     setSelectedModuleId('');
   }, [selectedYear, modules]);
 
-  useEffect(() => { fetchBooks(); }, [selectedModuleId, debouncedSearch]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchBooks(controller.signal);
+    return () => controller.abort();
+  }, [selectedModuleId, debouncedSearch]);
 
   const fetchModules = async () => {
     setLoadingModules(true);
@@ -43,23 +49,26 @@ const BooksPage = () => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setModules(await res.json());
     } catch (err) {
+      logger.error({ err }, 'BooksPage fetchModules failed');
       setModulesError(err.message);
     } finally {
       setLoadingModules(false);
     }
   };
 
-  const fetchBooks = useCallback(async () => {
+  const fetchBooks = useCallback(async (signal) => {
     setLoadingBooks(true);
     setBooksError(null);
     try {
       let url = `${API_BASE_URL}/api/books?`;
       if (selectedModuleId)  url += `moduleId=${selectedModuleId}&`;
       if (debouncedSearch.trim()) url += `search=${encodeURIComponent(debouncedSearch.trim())}&`;
-      const res  = await fetchWithAuth(url);
+      const res  = await fetchWithAuth(url, signal ? { signal } : undefined);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setBooks(await res.json());
     } catch (err) {
+      if (err.name === 'AbortError') return;
+      logger.error({ err }, 'BooksPage fetchBooks failed');
       setBooksError(err.message);
     } finally {
       setLoadingBooks(false);
@@ -67,6 +76,8 @@ const BooksPage = () => {
   }, [selectedModuleId, debouncedSearch]);
 
   const handleDownload = async (book) => {
+    if (downloading) return;
+    setDownloading(book._id);
     try {
       const token = await refreshToken();
       const res = await fetch(`${API_BASE_URL}/api/books/download/${book._id}`, {
@@ -83,8 +94,9 @@ const BooksPage = () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
+      logger.error({ err, bookId: book._id }, 'BooksPage download failed');
       notify('Échec du téléchargement.', 'error');
-    }
+    } finally { setDownloading(null); }
   };
 
   return (
@@ -136,7 +148,7 @@ const BooksPage = () => {
                   <button type="button" className="btn-primary" style={{ padding: '6px 16px', fontSize: '12px' }}
                     onClick={(e) => { e.stopPropagation(); setOpenBook(book); }}>Lire</button>
                   <button type="button" className="btn-icon" style={{ width: '30px', height: '30px', fontSize: '12px' }}
-                    onClick={(e) => { e.stopPropagation(); handleDownload(book); }}>⬇</button>
+                    onClick={(e) => { e.stopPropagation(); handleDownload(book); }} disabled={downloading === book._id}>{downloading === book._id ? '...' : '⬇'}</button>
                 </div>
               </div>
             ))}
@@ -158,7 +170,7 @@ const BooksPage = () => {
               <span style={{ fontWeight: 'bold', color: '#111' }}>📖 {openBook.title}</span>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button type="button" className="btn-dark" style={{ padding: '6px 16px', fontSize: '12px' }}
-                  onClick={() => handleDownload(openBook)}>⬇ Télécharger</button>
+                  onClick={() => handleDownload(openBook)} disabled={downloading === openBook._id}>{downloading === openBook._id ? 'Téléchargement...' : '⬇ Télécharger'}</button>
                 <button type="button" className="btn-primary" style={{ padding: '6px 16px', fontSize: '12px', background: '#e74c3c' }}
                   onClick={() => setOpenBook(null)}>✕ Fermer</button>
               </div>
@@ -185,7 +197,8 @@ const BookPreview = ({ bookId, title }) => {
         if (!res.ok) throw new Error('Load failed');
         const blob = await res.blob();
         if (!cancelled) setSrc(URL.createObjectURL(blob));
-      } catch {
+      } catch (err) {
+        logger.error({ err, bookId }, 'BookPreview load failed');
         if (!cancelled) setError(true);
       }
     })();

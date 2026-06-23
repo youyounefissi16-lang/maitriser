@@ -6,8 +6,10 @@ import Sidebar from "./components/adminSidebar";
 import AdminProtectedRoute from "./components/AdminProtectedRoute.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { ToastProvider } from "./components/Toast";
+import { SoundProvider } from "./context/SoundContext";
 import axios from "axios";
 import { setToken, setTokenGetter } from "./utils/tokenStore";
+import { logger } from "./utils/logger";
 import "./styles/adminTheme.css";
 import "./styles/adminStyles.css";
 import "./styles/sharedAdmin.css";
@@ -26,6 +28,29 @@ const AdminLogin = lazy(() => import("./pages/adminLogin.jsx"));
 const AdminSignup = lazy(() => import("./pages/AdminSignup.jsx"));
 const AdminSetup = lazy(() => import("./pages/AdminSetup.jsx"));
 const NotFound = lazy(() => import("./pages/NotFound.jsx"));
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) {
+    logger.error({ err: error, info }, 'Admin ErrorBoundary caught');
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="admin-page" style={{ padding: 60, textAlign: 'center' }}>
+          <h2>An error occurred</h2>
+          <p style={{ color: '#e74c3c', margin: '12px 0' }}>{this.state.error.message}</p>
+          <button className="btn-primary" onClick={() => window.location.reload()}>Reload page</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const ClerkAxiosSetup = ({ children }) => {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -50,7 +75,7 @@ const ClerkAxiosSetup = ({ children }) => {
       if (aborted) return;
       if (token) {
         setToken(token);
-        getTokenRef.current().then((t) => { if (t) setToken(t); }).catch(() => {});
+        getTokenRef.current().then((t) => { if (t) setToken(t); }).catch((err) => { logger.error({ err }, 'AdminApp initial token refresh failed'); });
         setReady(true);
       } else if (!isSignedIn) {
         setReady(true);
@@ -68,7 +93,7 @@ const ClerkAxiosSetup = ({ children }) => {
     });
     const refreshInterval = setInterval(async () => {
       if (aborted) return;
-      getTokenRef.current().then((token) => { if (token) setToken(token); }).catch(() => {});
+      getTokenRef.current().then((token) => { if (token) setToken(token); }).catch((err) => { logger.error({ err }, 'AdminApp refreshInterval token refresh failed'); });
     }, 30 * 1000);
     return () => {
       aborted = true;
@@ -87,6 +112,7 @@ const AppContent = () => {
 
   return (
     <ThemeProvider>
+      <SoundProvider>
       <ToastProvider>
         <ClerkAxiosSetup>
         <div className="admin-app">
@@ -129,6 +155,7 @@ const AppContent = () => {
         </div>
       </ClerkAxiosSetup>
       </ToastProvider>
+      </SoundProvider>
     </ThemeProvider>
   );
 };
@@ -136,7 +163,9 @@ const AppContent = () => {
 const App = () => {
   return (
     <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
-      <AppContent />
+      <ErrorBoundary>
+        <AppContent />
+      </ErrorBoundary>
     </ClerkProvider>
   );
 };

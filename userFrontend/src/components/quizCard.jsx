@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useToast } from './Toast.jsx';
+import { useSound } from '../context/SoundContext';
+import { useTranslation } from '../context/LanguageContext';
 import { SkeletonQuizItem } from './LoadingSkeleton';
+import { logger } from '../utils/logger';
 import '../styles/teal-theme.css';
 
 const TIMER_SECONDS = 60;
@@ -12,6 +15,8 @@ const QuizCard = () => {
   const { id }       = useParams();
   const navigate     = useNavigate();
   const notify = useToast();
+  const play = useSound();
+  const { t } = useTranslation();
 
   const [quizData, setQuizData]   = useState(
     state ? { quizId: state.quizId, quizName: state.quizName, question: state.question, caseId: state.caseId || null } : null
@@ -60,13 +65,13 @@ const QuizCard = () => {
           quizId:   data._id,
           quizName: data.question?.questionText || data.quizId,
           question: {
-            questionText: data.question.questionText,
-            options:      data.question.options,
+            questionText: data.question?.questionText,
+            options:      data.question?.options || [],
           },
           caseId: data.caseId || null,
         });
       } catch (err) {
-        if (err.name !== 'AbortError') navigate('/quizPage');
+        if (err.name !== 'AbortError') { logger.error({ err, quizId: id }, 'QuizCard fetch failed'); notify('Quiz introuvable ou erreur de chargement', 'error'); play('navigate'); navigate('/quizPage'); }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -107,9 +112,10 @@ const QuizCard = () => {
       try {
         const res = await fetchWithAuth(`${API_BASE_URL}/api/bookmarks/${quizData.quizId}`, { signal: controller.signal });
         if (controller.signal.aborted) return;
+        if (!res.ok) return;
         const data = await res.json();
         setBookmarked(data.bookmarked);
-      } catch { /* ignore */ }
+      } catch (err) { logger.error({ err, quizId: quizData?.quizId }, 'QuizCard bookmark check failed'); }
     })();
     return () => controller.abort();
   }, [quizData?.quizId]);
@@ -118,6 +124,7 @@ const QuizCard = () => {
 
   const toggleOption = (opt) => {
     if (submitted) return;
+    play('select');
     if (studyMode) {
       setSelected([opt]);
       handleStudyCheck(opt);
@@ -136,11 +143,14 @@ const QuizCard = () => {
         method: 'POST',
         body: { selectedAnswers: [opt] },
       });
+      if (!res.ok) throw new Error(t('quizcard.error.verify'));
       const data = await res.json();
       setResult(data);
       setSubmitted(true);
-    } catch {
-      notify('Erreur de vérification.', 'error');
+      play(data.correct ? 'success' : 'error');
+    } catch (err) {
+      logger.error({ err, quizId: quizData?.quizId, opt }, 'QuizCard studyCheck failed');
+      notify(t('quizcard.error.verify'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -148,7 +158,8 @@ const QuizCard = () => {
 
   const handleSubmit = async () => {
     if (submitted || submittingRef.current) return;
-    if (selected.length === 0) return notify('Sélectionnez au moins une réponse.', 'warning');
+    if (selected.length === 0) return notify(t('quizcard.warning.select'), 'warning');
+    play('submit');
     submittingRef.current = true;
     setSubmitting(true);
     setTimerActive(false);
@@ -158,11 +169,14 @@ const QuizCard = () => {
         method: 'POST',
         body: { selectedAnswers: selected },
       });
+      if (!res.ok) throw new Error(t('quizcard.error.submit'));
       const data = await res.json();
       setResult(data);
       setSubmitted(true);
-    } catch {
-      notify('Échec de la soumission. Veuillez réessayer.', 'error');
+      play(data.correct ? 'success' : 'error');
+    } catch (err) {
+      logger.error({ err, quizId: quizData?.quizId }, 'QuizCard submit failed');
+      notify(t('quizcard.error.submitRetry'), 'error');
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -176,9 +190,12 @@ const QuizCard = () => {
         method: 'POST',
         body: { quizId: quizData.quizId },
       });
+      if (!res.ok) return notify(t('quizcard.error.bookmark'), 'error');
       const data = await res.json();
       setBookmarked(data.bookmarked);
-    } catch { /* ignore */ }
+      play('bookmark');
+      notify(data.bookmarked ? t('quizcard.bookmark.added') : t('quizcard.bookmark.removed'), 'success');
+    } catch (err) { logger.error({ err, quizId: quizData?.quizId }, 'QuizCard toggleBookmark failed'); notify(t('quizcard.error.network'), 'error'); }
   };
 
   const formatTime = (s) => {
@@ -206,15 +223,19 @@ const QuizCard = () => {
             </button>
           </div>
           {!studyMode && (
-            <span className="timer-badge" style={{ color: timeLeft <= 10 ? '#e74c3c' : 'var(--text-dark)' }}>
-              ⏱ {formatTime(timeLeft)}
+            <span className={`timer-badge ${timerActive ? 'timer-running' : ''}`} style={{
+              color: timeLeft <= 10 ? 'var(--color-danger)' : 'var(--text-dark)',
+              opacity: timerActive ? 1 : 0.5,
+            }}>
+              {timerActive ? '⏱' : '⏸'} {formatTime(timeLeft)}
+              {!timerActive && <span style={{ fontSize: '11px', marginLeft: '6px', color: '#888' }}>Click an answer to start</span>}
             </span>
           )}
         </div>
 
-        {studyMode && <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>🔍 Mode étude — Cliquez sur une réponse pour voir immédiatement si elle est correcte</div>}
+        {studyMode && <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-light)', marginBottom: '10px' }}>🔍 {t('quizcard.studyMode')}</div>}
 
-        {quizData.caseId && (
+        {quizData.caseId && typeof quizData.caseId === 'object' && (
           <div className="case-box" style={{
             background: '#e3f2fd', border: '1px solid #bbdefb', borderRadius: '10px',
             padding: '14px 16px', marginBottom: '16px',
@@ -223,7 +244,7 @@ const QuizCard = () => {
               📋 Cas clinique — {quizData.caseId.title || ''}
             </div>
             <p style={{ margin: 0, fontSize: '14px', color: '#1a237e', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-              {quizData.caseId.description || quizData.caseId}
+              {quizData.caseId.description || ''}
             </p>
           </div>
         )}
@@ -233,24 +254,23 @@ const QuizCard = () => {
         </p>
 
         {isMulti && !submitted && !studyMode && (
-          <p style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
-            Sélectionnez toutes les réponses correctes
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-light)', marginBottom: '10px' }}>
+            {t('quizcard.selectAll')}
           </p>
         )}
 
         {options.map((opt, i) => {
-          let bg = '#f9f9f9';
-          let borderColor = '#e8e8e8';
+          let optClass = 'option-label';
           if (submitted) {
-            if (result?.correctAnswers?.includes(opt)) { bg = '#d4edda'; borderColor = '#c3e6cb'; }
-            else if (selected.includes(opt))           { bg = '#f8d7da'; borderColor = '#f5c6cb'; }
+            if (result?.correctAnswers?.includes(opt)) optClass += ' correct';
+            else if (selected.includes(opt)) optClass += ' incorrect';
           } else if (selected.includes(opt)) {
-            bg = '#e3f2fd'; borderColor = '#14a3a8';
+            optClass += ' selected';
           }
 
           return (
-            <label key={i} className="option-label" onClick={() => toggleOption(opt)}
-              style={{ background: bg, borderColor, cursor: submitted ? 'default' : 'pointer' }}>
+            <label key={i} className={optClass} onClick={() => toggleOption(opt)}
+              style={{ cursor: submitted ? 'default' : 'pointer' }}>
               <input type="checkbox" checked={selected.includes(opt)}
                 onChange={() => toggleOption(opt)} disabled={submitted} />
               {opt}
@@ -259,39 +279,35 @@ const QuizCard = () => {
         })}
 
         {submitted && result && (
-          <div className="result-box" style={{
-            marginTop: '20px', padding: '16px', borderRadius: '10px',
-            background: result.correct ? '#d4edda' : '#f8d7da',
-            border: `1px solid ${result.correct ? '#c3e6cb' : '#f5c6cb'}`,
-          }}>
-            <p style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: '6px', color: '#111' }}>
+          <div className={`result-box ${result.correct ? 'pass' : 'fail'}`}>
+            <p className="result-box-title">
               {result.correct ? '✅ Correct !' : '❌ Incorrect'}
             </p>
             {!result.correct && (
-              <p style={{ fontSize: '14px', color: '#555' }}>
-                <strong>Réponse{result.correctAnswers?.length > 1 ? 's' : ''} correcte{result.correctAnswers?.length > 1 ? 's' : ''} :</strong>{' '}
+              <p className="result-box-answer">
+                <strong>{result.correctAnswers?.length > 1 ? t('quizcard.correctAnswers') : t('quizcard.correctAnswer')} :</strong>{' '}
                 {result.correctAnswers?.join(', ')}
               </p>
             )}
             {result.explanation && (
-              <div className="explanation-box" style={{ marginTop: '12px', padding: '12px', background: 'rgba(255,255,255,0.7)', borderRadius: '8px', fontSize: '14px', color: '#333' }}>
-                <strong>💡 Explication :</strong> {result.explanation}
+              <div className="explanation-box">
+                <strong>💡 {t('quizcard.explanation')} :</strong> {result.explanation}
               </div>
             )}
           </div>
         )}
 
-        <div className="button-row" style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+        <div className="button-row">
           {!submitted ? (
             !studyMode && (
               <button className="btn-primary" onClick={handleSubmit}
                 disabled={submitting || selected.length === 0}>
-                {submitting ? 'Soumission…' : 'Soumettre la réponse'}
+                {submitting ? t('quizcard.submitting') : t('quizcard.submit')}
               </button>
             )
           ) : (
             <button className="btn-dark" onClick={() => navigate('/quizPage')}>
-              Retour aux QCM
+              {t('quizcard.back')}
             </button>
           )}
         </div>
@@ -300,4 +316,4 @@ const QuizCard = () => {
   );
 };
 
-export default QuizCard;
+export default React.memo(QuizCard);
