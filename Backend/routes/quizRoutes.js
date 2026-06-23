@@ -42,7 +42,9 @@ router.get('/quizzes', catchAsync(async (req, res) => {
 }));
 
 // GET /api/quizzes/:id — single quiz (student-safe: no correctAnswers, only published)
-router.get('/quizzes/:id', catchAsync(async (req, res) => {
+router.get('/quizzes/:id', [
+  param('id').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   const quiz = await Quiz.findById(req.params.id).populate('moduleId').populate('caseId');
   if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
   if (!quiz.published) return res.status(404).json({ message: 'Quiz not found' });
@@ -147,7 +149,9 @@ router.delete('/delete-quiz/:id', requireAdmin, [
 }));
 
 // GET /api/cases/:id — single case with its linked quizzes (student-safe)
-router.get('/cases/:id', catchAsync(async (req, res) => {
+router.get('/cases/:id', [
+  param('id').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   const c = await Case.findById(req.params.id);
   if (!c) return res.status(404).json({ message: 'Case not found' });
   const quizzes = await Quiz.find({ caseId: c._id }).populate('moduleId', 'name year');
@@ -195,7 +199,10 @@ router.post('/admin/create-case-quizzes', requireAdmin, catchAsync(async (req, r
 }));
 
 // POST /api/admin/bulk-publish
-router.post('/bulk/publish', requireAdmin, catchAsync(async (req, res) => {
+router.post('/bulk/publish', requireAdmin, [
+  body('ids').isArray({ min: 1 }),
+  body('ids.*').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   const { ids } = req.body;
   if (!ids?.length) return res.status(400).json({ message: 'ids array is required' });
   await Quiz.updateMany({ _id: { $in: ids } }, { $set: { published: true } });
@@ -203,7 +210,10 @@ router.post('/bulk/publish', requireAdmin, catchAsync(async (req, res) => {
 }));
 
 // POST /api/admin/bulk-unpublish
-router.post('/bulk/unpublish', requireAdmin, catchAsync(async (req, res) => {
+router.post('/bulk/unpublish', requireAdmin, [
+  body('ids').isArray({ min: 1 }),
+  body('ids.*').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   const { ids } = req.body;
   if (!ids?.length) return res.status(400).json({ message: 'ids array is required' });
   await Quiz.updateMany({ _id: { $in: ids } }, { $set: { published: false } });
@@ -211,7 +221,10 @@ router.post('/bulk/unpublish', requireAdmin, catchAsync(async (req, res) => {
 }));
 
 // POST /api/admin/bulk-delete
-router.post('/bulk/delete', requireAdmin, catchAsync(async (req, res) => {
+router.post('/bulk/delete', requireAdmin, [
+  body('ids').isArray({ min: 1 }),
+  body('ids.*').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   const { ids } = req.body;
   if (!ids?.length) return res.status(400).json({ message: 'ids array is required' });
   const result = await Quiz.deleteMany({ _id: { $in: ids } });

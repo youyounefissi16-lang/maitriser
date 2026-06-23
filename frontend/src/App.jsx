@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import React, { useState, useRef, Suspense, lazy } from 'react';
 import { Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom';
 import { ClerkProvider, useAuth } from "@clerk/react";
 import Home from './pages/Home';
@@ -14,9 +14,8 @@ import { LanguageProvider, useTranslation } from './context/LanguageContext';
 import { SoundProvider } from './context/SoundContext';
 import { ThemeProvider } from './context/ThemeContext';
 import CookieConsent from './components/CookieConsent';
-import axios from 'axios';
-import { setToken, setTokenGetter } from './utils/tokenStore';
 import { logger } from './utils/logger';
+import useClerkToken from './hooks/useClerkToken';
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -52,64 +51,16 @@ const VoiceExamManagement = lazy(() => import('./pages/VoiceExamManagement'));
 const Reports = lazy(() => import('./pages/Reports'));
 const AdminSetup = lazy(() => import('./pages/AdminSetup'));
 
-const ClerkAxiosSetup = ({ children }) => {
-  const { getToken, isSignedIn, isLoaded } = useAuth();
-  const [ready, setReady] = useState(false);
-  const getTokenRef = useRef(getToken);
-  getTokenRef.current = getToken;
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    setTokenGetter(() => getTokenRef.current());
-    let aborted = false;
-    (async () => {
-      let token = await getTokenRef.current();
-      if (!token && isSignedIn) {
-        for (let i = 0; i < 30; i++) {
-          await new Promise((r) => setTimeout(r, 500));
-          if (aborted) return;
-          token = await getTokenRef.current();
-          if (token) break;
-        }
-      }
-      if (aborted) return;
-      if (token) {
-        setToken(token);
-        getTokenRef.current().then((t) => { if (t) setToken(t); }).catch((err) => { logger.error({ err }, 'App initial token refresh failed'); });
-        setReady(true);
-      } else if (!isSignedIn) {
-        setReady(true);
-      } else {
-        setTimeout(() => setReady(true), 100);
-      }
-    })();
-    const interceptor = axios.interceptors.request.use(async (config) => {
-      const token = await getTokenRef.current();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-        setToken(token);
-      }
-      return config;
-    });
-    const refreshInterval = setInterval(async () => {
-      if (aborted) return;
-      getTokenRef.current().then((token) => { if (token) setToken(token); }).catch((err) => { logger.error({ err }, 'App refreshInterval token refresh failed'); });
-    }, 30 * 1000);
-    return () => {
-      aborted = true;
-      axios.interceptors.request.eject(interceptor);
-      clearInterval(refreshInterval);
-    };
-  }, [isLoaded, isSignedIn]);
-
-  if (!ready) return <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}><div className="card-teal" style={{ textAlign: 'center', padding: 40 }}>Chargement…</div></div>;
-  return children;
-};
-
 const Fallback = () => {
   const { t } = useTranslation();
   return <div className="page-teal"><div className="card-teal" style={{ textAlign: 'center', padding: 40 }}>{t('loading')}</div></div>;
 };
+
+const LoadingPage = () => (
+  <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+    <div className="card-teal" style={{ textAlign: 'center', padding: 40 }}>Chargement…</div>
+  </div>
+);
 
 const UserLayout = ({ isDarkMode, toggleDarkMode }) => {
   const location = useLocation();
@@ -200,10 +151,13 @@ const AdminLayout = () => {
 };
 
 const AppContent = () => {
+  const ready = useClerkToken();
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/admin/setup';
   const [isDarkMode, setIsDarkMode] = useState(() => { try { return localStorage.getItem('darkMode') === 'true'; } catch { return false; } });
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
+
+  if (!ready) return <LoadingPage />;
 
   if (isAdminRoute) {
     return (
@@ -258,9 +212,7 @@ const App = () => {
   return (
     <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
       <ErrorBoundary>
-        <ClerkAxiosSetup>
-          <AppContent />
-        </ClerkAxiosSetup>
+        <AppContent />
       </ErrorBoundary>
     </ClerkProvider>
   );

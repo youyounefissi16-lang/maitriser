@@ -1,4 +1,5 @@
 import express from 'express';
+import { param } from 'express-validator';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -10,6 +11,7 @@ import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
 import { escapeRegex } from '../utils/escapeRegex.js';
 import { getPagination, paginatedResponse } from '../utils/paginate.js';
+import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -83,7 +85,9 @@ const serveSafe = (filename) => {
 };
 
 // Download book PDF
-router.get('/books/download/:id', catchAsync(async (req, res) => {
+router.get('/books/download/:id', [
+  param('id').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   const book = await Book.findById(req.params.id);
   if (!book) return res.status(404).json({ message: 'Book not found' });
   const filePath = serveSafe(book.filename);
@@ -100,7 +104,9 @@ router.get('/books/download/:id', catchAsync(async (req, res) => {
 }));
 
 // Serve PDF file
-router.get('/books/file/:id', catchAsync(async (req, res) => {
+router.get('/books/file/:id', [
+  param('id').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   const book = await Book.findById(req.params.id);
   if (!book) return res.status(404).json({ message: 'Book not found' });
   const filePath = serveSafe(book.filename);
@@ -116,7 +122,9 @@ router.get('/books/file/:id', catchAsync(async (req, res) => {
 }));
 
 // Delete book
-router.delete('/books/:id', requireAdmin, catchAsync(async (req, res) => {
+router.delete('/books/:id', requireAdmin, [
+  param('id').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   const book = await Book.findByIdAndDelete(req.params.id);
   if (!book) return res.status(404).json({ message: 'Book not found' });
   const filePath = path.join(UPLOAD_DIR, book.filename);

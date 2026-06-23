@@ -1,4 +1,5 @@
 import express from 'express';
+import { param } from 'express-validator';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -10,6 +11,7 @@ import { cacheMiddleware, delPattern } from '../utils/cache.js';
 import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
 import { getPagination, paginatedResponse } from '../utils/paginate.js';
+import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
 
@@ -44,7 +46,9 @@ router.get('/voice-exams', cacheMiddleware(), catchAsync(async (req, res) => {
   res.json(exams);
 }));
 
-router.get('/voice-exams/:id', catchAsync(async (req, res) => {
+router.get('/voice-exams/:id', [
+  param('id').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   const exam = await VoiceExam.findById(req.params.id).populate('moduleId', 'name year');
   if (!exam) return res.status(404).json({ message: 'Voice exam not found' });
   res.json(exam);
@@ -71,7 +75,9 @@ router.post('/voice-exams', requireAdmin, upload.array('images', 10), catchAsync
   res.status(201).json({ message: 'Voice exam created successfully', exam });
 }));
 
-router.put('/voice-exams/:id', requireAdmin, upload.array('images', 10), catchAsync(async (req, res) => {
+router.put('/voice-exams/:id', requireAdmin, upload.array('images', 10), [
+  param('id').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   let { title, moduleId, clinicalCasePrompt, questions, existingImages } = req.body;
   let year;
   if (moduleId) {
@@ -103,7 +109,9 @@ router.put('/voice-exams/:id', requireAdmin, upload.array('images', 10), catchAs
   res.json({ message: 'Voice exam updated successfully', exam: updated });
 }));
 
-router.delete('/voice-exams/:id', requireAdmin, catchAsync(async (req, res) => {
+router.delete('/voice-exams/:id', requireAdmin, [
+  param('id').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   const exam = await VoiceExam.findById(req.params.id);
   if (!exam) return res.status(404).json({ message: 'Voice exam not found' });
 
@@ -126,7 +134,9 @@ router.get('/voice-exam-images/:filename', (req, res) => {
   res.sendFile(filepath);
 });
 
-router.post('/voice-exams/:id/submit', catchAsync(async (req, res) => {
+router.post('/voice-exams/:id/submit', [
+  param('id').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   const { answers } = req.body;
   if (!Array.isArray(answers))
     return res.status(400).json({ message: 'answers array is required' });

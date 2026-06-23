@@ -6,12 +6,13 @@ export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }) => {
   const [darkMode, setDarkMode] = useState(() => {
-    try { return localStorage.getItem('adminDarkMode') === 'true'; } catch { return false; }
+    try { return localStorage.getItem('darkMode') === 'true'; } catch { return false; }
   });
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark-mode', darkMode);
-    localStorage.setItem('adminDarkMode', darkMode);
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
 
   const toggleDarkMode = () => setDarkMode(prev => !prev);

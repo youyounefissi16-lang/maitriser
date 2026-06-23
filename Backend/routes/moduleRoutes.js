@@ -1,4 +1,5 @@
 import express from 'express';
+import { param } from 'express-validator';
 import multer from 'multer';
 import { parse } from 'csv-parse/sync';
 import fs from 'fs';
@@ -7,6 +8,7 @@ import { requireAdmin } from '../controllers/authController.js';
 import { cacheMiddleware, delPattern } from '../utils/cache.js';
 import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
+import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
@@ -28,7 +30,9 @@ router.post('/modules', requireAdmin, catchAsync(async (req, res) => {
 }));
 
 // PUT update module
-router.put('/modules/:id', requireAdmin, catchAsync(async (req, res) => {
+router.put('/modules/:id', requireAdmin, [
+  param('id').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   const { name, year, courses } = req.body;
   const updated = await Module.findByIdAndUpdate(req.params.id, { name, year, courses: courses || [] }, { new: true });
   if (!updated) return res.status(404).json({ message: 'Module not found' });
@@ -37,7 +41,9 @@ router.put('/modules/:id', requireAdmin, catchAsync(async (req, res) => {
 }));
 
 // DELETE module
-router.delete('/modules/:id', requireAdmin, catchAsync(async (req, res) => {
+router.delete('/modules/:id', requireAdmin, [
+  param('id').isMongoId(),
+], validate, catchAsync(async (req, res) => {
   const deleted = await Module.findByIdAndDelete(req.params.id);
   if (!deleted) return res.status(404).json({ message: 'Module not found' });
   delPattern('GET:/api/modules');
