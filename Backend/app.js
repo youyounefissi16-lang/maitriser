@@ -118,12 +118,9 @@ app.use('/api', verifyToken, userLimiter, bookmarkRoutes);
 app.use('/api', verifyToken, requireAdmin, userRoutes);
 app.use('/api', verifyToken, requireAdmin, dashboardRoutes);
 
-app.use('/api', verifyToken, requireAdmin, userRoutes);
-app.use('/api', verifyToken, requireAdmin, dashboardRoutes);
-
 app.use((err, req, res, next) => {
   logger.error({ err, url: req.originalUrl, method: req.method }, 'Unhandled error');
-  res.status(err.status || 500).json({ message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message || 'Internal server error' });
+  res.status(err.status || 500).json({ message: 'Internal server error' });
 });
 
 export default app;
