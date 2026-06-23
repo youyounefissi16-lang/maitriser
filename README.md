@@ -1,6 +1,6 @@
 # MAITRISEZ — Gestion de Quiz & Examens
 
-Application MERN full-stack avec authentification Clerk, dédiée à la création, gestion et passation de quiz, examens à choix multiples, études de cas et examens oraux. Interfaces séparées pour les administrateurs et les utilisateurs.
+Application MERN full-stack avec authentification Clerk, dédiée à la création, gestion et passation de quiz, examens à choix multiples, études de cas et examens oraux. Interface unique avec routage par rôle (utilisateur et administrateur).
 
 ## Créateur
 
@@ -10,18 +10,7 @@ Application MERN full-stack avec authentification Clerk, dédiée à la créatio
 
 ## Fonctionnalités
 
-### Interface Administrateur (`AdminFrontend` — port 5173)
-
-- **Dashboard** — Statistiques globales, graphiques d'activité (Chart.js)
-- **Gestion des Quiz** — CRUD complet, questions par module, minuteur, statut publié/brouillon
-- **Gestion des Modules** — Organisation des quiz par thème
-- **Gestion des Utilisateurs** — Consultation, recherche, pagination
-- **Gestion des Examens Oraux** — Création et suivi des sessions vocales
-- **Gestion des Livres** — Upload de PDF, consultation
-- **Rapports** — Analyse des résultats par quiz, module, utilisateur
-- **Profil Administrateur** — Modification des informations personnelles
-
-### Interface Utilisateur (`userFrontend` — port 5174)
+### Interface Utilisateur (port 5173)
 
 - **Authentification** — Clerk (email, OAuth Google/GitHub, SSO)
 - **Quiz** — Passation avec minuteur, feedback immédiat
@@ -33,6 +22,17 @@ Application MERN full-stack avec authentification Clerk, dédiée à la créatio
 - **Révision** — Revue détaillée des résultats
 - **Profil** — Informations personnelles, progression
 - **Support multilingue** — Français / Anglais
+
+### Interface Administrateur (port 5173, `/admin/*`)
+
+- **Dashboard** — Statistiques globales, graphiques d'activité (Chart.js)
+- **Gestion des Quiz** — CRUD complet, questions par module, minuteur, statut publié/brouillon
+- **Gestion des Modules** — Organisation des quiz par thème
+- **Gestion des Utilisateurs** — Consultation, recherche, pagination
+- **Gestion des Examens Oraux** — Création et suivi des sessions vocales
+- **Gestion des Livres** — Upload de PDF, consultation
+- **Rapports** — Analyse des résultats par quiz, module, utilisateur
+- **Profil Administrateur** — Modification des informations personnelles
 
 ### Backend (`Backend` — port 4000)
 
@@ -98,48 +98,36 @@ SMTP_USER=...
 SMTP_PASS=...
 ```
 
-### 3. Frontend Administrateur
+### 3. Frontend (unique)
 
 ```bash
-cd ../AdminFrontend
+cd frontend
 cp .env.example .env
 npm install
 ```
 
-Éditer `AdminFrontend/.env` :
+Éditer `frontend/.env` :
 
 ```env
 VITE_API_BASE_URL=http://localhost:4000
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
 ```
 
-### 4. Frontend Utilisateur
-
-```bash
-cd ../userFrontend
-cp .env.example .env
-npm install
-```
-
-Mêmes variables que l'admin frontend.
-
-### 5. Lancer
+### 4. Lancer
 
 ```bash
 # Terminal 1
 cd Backend && npm start
 
 # Terminal 2
-cd AdminFrontend && npm run dev
-
-# Terminal 3
-cd userFrontend && npm run dev
+cd frontend && npm run dev
 ```
 
-### 6. Accès
+### 5. Accès
 
-- **Admin** : `http://localhost:5173/logging` → saisir le code secret `youcef16`
-- **Utilisateur** : `http://localhost:5174/login`
+- **Utilisateur** : `http://localhost:5173/login`
+- **Admin** : `http://localhost:5173/admin/dashboard` (réservé aux comptes admin)
+- **Configuration admin** : `http://localhost:5173/admin/setup` (première activation)
 
 ---
 
@@ -151,26 +139,20 @@ maitriser/
 │   ├── controllers/      # Logique métier
 │   ├── models/           # Schémas Mongoose
 │   ├── routes/           # Définitions des routes API
-│   ├── utils/            # Cache, email, pagination, logger
+│   ├── middleware/       # JWT blacklist, validate, password validator
+│   ├── utils/            # Cache, email, pagination, logger, escapeRegex
 │   └── index.js          # Point d'entrée
 │
-├── AdminFrontend/        # Interface admin (React + Vite)
+├── frontend/             # Interface unique (React + Vite)
 │   ├── src/
-│   │   ├── components/   # Composants réutilisables
-│   │   ├── pages/        # Pages (Dashboard, Quiz, Users...)
-│   │   ├── config/       # Axios, endpoints, authFetch
-│   │   ├── styles/       # Thème et styles
-│   │   └── utils/        # Token store
-│   └── vite.config.js
-│
-├── userFrontend/         # Interface utilisateur (React + Vite)
-│   ├── src/
-│   │   ├── components/   # Header, quizCard, VoiceExam...
-│   │   ├── pages/        # QuizPage, CaseExam, Books...
-│   │   ├── config/       # API, endpoints
+│   │   ├── components/   # Composants (user: Header, quizCard / admin: adminHeader, Sidebar)
+│   │   ├── pages/        # Pages utilisateur + admin (Dashboard, QuizManagement...)
+│   │   ├── config/       # API, endpoints, authFetch, axiosAdmin
+│   │   ├── context/      # Language, Sound, Theme
+│   │   ├── hooks/        # useAdminWS
 │   │   ├── locales/      # i18n (fr, en)
-│   │   ├── styles/       # Thème teal et styles
-│   │   └── utils/        # Shuffle, token store
+│   │   ├── styles/       # Thème teal + thème admin
+│   │   └── utils/        # Token store, shuffle, sound, logger
 │   └── vite.config.js
 │
 ├── start-mongodb.ps1     # Script de démarrage MongoDB

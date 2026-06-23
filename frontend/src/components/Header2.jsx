@@ -10,6 +10,7 @@ const Header2 = ({ toggleDarkMode, isDarkMode }) => {
   const { t, lang, setLang } = useTranslation();
   const { signOut } = useClerk();
   const play = useSound();
+  const isAdmin = (() => { try { return localStorage.getItem('adminRole') === 'admin'; } catch { return false; } })();
 
   const handleLogout = () => {
     play('navigate');
@@ -39,6 +40,11 @@ const Header2 = ({ toggleDarkMode, isDarkMode }) => {
       </div>
 
       <div className="header-actions">
+        {isAdmin && (
+          <NavLink to="/admin/dashboard" className="header-btn-admin" onClick={() => play('navigate')}>
+            Admin
+          </NavLink>
+        )}
         <button onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')} className="header-btn-lang" title={t('nav.language')}>
           {lang === 'fr' ? 'EN' : 'FR'}
         </button>

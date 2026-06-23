@@ -1004,6 +1004,23 @@ h1, h2, h3, h4, h5, h6 {
   opacity: 0.9;
   transform: translateY(-1px);
 }
+.header-btn-admin {
+  padding: 8px 20px;
+  border-radius: var(--radius-pill);
+  border: none;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent);
+  color: var(--text-dark);
+  font-family: var(--font-family);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.header-btn-admin:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
 [data-theme="dark"] .header-nav {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   border-color: rgba(255, 255, 255, 0.04);

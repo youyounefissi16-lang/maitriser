@@ -10,25 +10,25 @@ const Sidebar = ({ sidebarOpen }) => {
   return (
     <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
       <nav>
-        <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
+        <NavLink to="/admin/dashboard" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
           <FaHome className="sidebar-icon" /><span className="sidebar-text">Dashboard</span>
         </NavLink>
-        <NavLink to="/module-management" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
+        <NavLink to="/admin/module-management" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
           <FaLayerGroup className="sidebar-icon" /><span className="sidebar-text">Modules</span>
         </NavLink>
-        <NavLink to="/quiz-management" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
+        <NavLink to="/admin/quiz-management" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
           <FaClipboardList className="sidebar-icon" /><span className="sidebar-text">Quizzes</span>
         </NavLink>
-        <NavLink to="/user-management" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
+        <NavLink to="/admin/user-management" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
           <FaUsers className="sidebar-icon" /><span className="sidebar-text">Users</span>
         </NavLink>
-        <NavLink to="/reports" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
+        <NavLink to="/admin/reports" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
           <FaChartLine className="sidebar-icon" /><span className="sidebar-text">Reports</span>
         </NavLink>
-        <NavLink to="/book-management" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
+        <NavLink to="/admin/book-management" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
           <FaBook className="sidebar-icon" /><span className="sidebar-text">Books</span>
         </NavLink>
-        <NavLink to="/voice-exam-management" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
+        <NavLink to="/admin/voice-exam-management" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
           <FaMicrophone className="sidebar-icon" /><span className="sidebar-text">Voice Exams</span>
         </NavLink>
       </nav>

@@ -50,9 +50,9 @@ const AdminProtectedRoute = () => {
   }, [isSignedIn, isLoaded]);
 
   if (!isLoaded) return <div style={{ padding: 24 }}>Vérification…</div>;
-  if (!isSignedIn) return <Navigate to="/logging" replace />;
+  if (!isSignedIn) return <Navigate to="/login" replace />;
   if (!synced) return <div style={{ padding: 24 }}>Syncing account…</div>;
-  if (role !== 'admin') return <Navigate to="/admin-setup" replace />;
+  if (role !== 'admin') return <Navigate to="/admin/setup" replace />;
   return <Outlet />;
 };
 

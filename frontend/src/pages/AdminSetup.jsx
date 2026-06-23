@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from "@clerk/react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../config/api';
 import '../styles/adminLogin.css';
@@ -45,7 +45,7 @@ const AdminSetup = () => {
       if (!token) { setError('Session expired. Please sign out and sign in again.'); setLoading(false); return; }
       await axios.post(`${API_BASE_URL}/api/admin/claim`, { code });
       localStorage.setItem('adminRole', 'admin');
-      navigate('/dashboard');
+      navigate('/admin/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || (err.message === 'Network Error' ? 'Network error. Please check your connection.' : 'Invalid code'));
     } finally {
@@ -53,7 +53,9 @@ const AdminSetup = () => {
     }
   };
 
-  if (!isLoaded || !tokenReady) {
+  if (!isLoaded) return <div style={{ padding: 24 }}>Vérification…</div>;
+  if (!isSignedIn) return <Navigate to="/login" replace />;
+  if (!tokenReady) {
     return (
       <div className="form-container">
         <div className="form" style={{ textAlign: 'center', padding: 40 }}>

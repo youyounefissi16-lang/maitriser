@@ -14,7 +14,7 @@ const AdminHeader = ({ toggleSidebar, sidebarOpen }) => {
   const handleLogout = () => {
     signOut();
     try { localStorage.removeItem('adminRole'); } catch { /* ignore */ }
-    navigate('/logging');
+    navigate('/login');
   };
   return (
     <header className="admin-header">
@@ -25,7 +25,8 @@ const AdminHeader = ({ toggleSidebar, sidebarOpen }) => {
         <div className="logo">MAITRISEZ Admin</div>
       </div>
       <nav className="nav-links">
-        <NavLink to="/profile" className="profile-link" onClick={() => play('navigate')}>Profile</NavLink>
+        <NavLink to="/dashboard" className="profile-link" onClick={() => play('navigate')}>User Panel</NavLink>
+        <NavLink to="/admin/profile" className="profile-link" onClick={() => play('navigate')}>Profile</NavLink>
         <button onClick={() => { play('click'); toggleDarkMode(); }}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: '1.2rem' }}
           aria-label="Toggle dark mode">

@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom';
 import { ClerkProvider, useAuth } from "@clerk/react";
 import Home from './pages/Home';
 import Header from './components/Header';
 import Header2 from './components/Header2';
 import FooterPage from './components/Footer.jsx';
 import ProtectedRoute from './components/protectedRoute';
+import AdminHeader from './components/adminHeader';
+import Sidebar from './components/adminSidebar';
+import AdminProtectedRoute from './components/AdminProtectedRoute';
 import { ToastProvider } from './components/Toast.jsx';
 import { LanguageProvider, useTranslation } from './context/LanguageContext';
 import { SoundProvider } from './context/SoundContext';
+import { ThemeProvider } from './context/ThemeContext';
 import CookieConsent from './components/CookieConsent';
 import axios from 'axios';
 import { setToken, setTokenGetter } from './utils/tokenStore';
@@ -38,6 +42,15 @@ const Privacy = lazy(() => import('./pages/Privacy'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const AdminDashboard = lazy(() => import('./pages/Dashboard'));
+const QuizManagement = lazy(() => import('./pages/QuizManagement'));
+const UserManagement = lazy(() => import('./pages/userManagement'));
+const ModuleManagement = lazy(() => import('./pages/ModuleManagement'));
+const AdminProfile = lazy(() => import('./pages/profile'));
+const BookManagement = lazy(() => import('./pages/BookManagement'));
+const VoiceExamManagement = lazy(() => import('./pages/VoiceExamManagement'));
+const Reports = lazy(() => import('./pages/Reports'));
+const AdminSetup = lazy(() => import('./pages/AdminSetup'));
 
 const ClerkAxiosSetup = ({ children }) => {
   const { getToken, isSignedIn, isLoaded } = useAuth();
@@ -93,28 +106,23 @@ const ClerkAxiosSetup = ({ children }) => {
   return children;
 };
 
-
-
 const Fallback = () => {
   const { t } = useTranslation();
   return <div className="page-teal"><div className="card-teal" style={{ textAlign: 'center', padding: 40 }}>{t('loading')}</div></div>;
 };
 
-const AppContent = () => {
+const UserLayout = ({ isDarkMode, toggleDarkMode }) => {
   const location = useLocation();
   const isHome = location.pathname === '/';
   const { isSignedIn } = useAuth();
-  const [isDarkMode, setIsDarkMode] = useState(() => { try { return localStorage.getItem('darkMode') === 'true'; } catch { return false; } });
+
+  const appPaths = ['/quizPage', '/resultPage', '/quiz/', '/mock-exam', '/case-exam', '/bookmarks', '/review', '/voice-exams', '/books'];
+  const isAppPath = appPaths.some((p) => location.pathname.startsWith(p));
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
     try { localStorage.setItem('darkMode', isDarkMode); } catch { /* ignore */ }
   }, [isDarkMode]);
-
-  const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
-
-  const appPaths = ['/quizPage', '/resultPage', '/quiz/', '/mock-exam', '/case-exam', '/bookmarks', '/review', '/voice-exams', '/books'];
-  const isAppPath = appPaths.some((p) => location.pathname.startsWith(p));
 
   return (
     <LanguageProvider>
@@ -162,6 +170,63 @@ const AppContent = () => {
     </SoundProvider>
     </LanguageProvider>
   );
+};
+
+import './styles/adminTheme.css';
+import './styles/adminStyles.css';
+import './styles/sharedAdmin.css';
+
+const AdminLayout = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+
+  return (
+    <SoundProvider>
+    <ToastProvider>
+    <ThemeProvider>
+      <div className="admin-app">
+        <AdminHeader toggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
+        <div className="main-content">
+          <Sidebar sidebarOpen={sidebarOpen} />
+          <div className="page-content" style={{ marginLeft: sidebarOpen ? 230 : 60, transition: 'margin-left 0.3s ease' }}>
+            <Outlet />
+          </div>
+        </div>
+      </div>
+    </ThemeProvider>
+    </ToastProvider>
+    </SoundProvider>
+  );
+};
+
+const AppContent = () => {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/admin/setup';
+  const [isDarkMode, setIsDarkMode] = useState(() => { try { return localStorage.getItem('darkMode') === 'true'; } catch { return false; } });
+  const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
+
+  if (isAdminRoute) {
+    return (
+      <Routes>
+        <Route path="/admin/setup" element={<AdminSetup />} />
+        <Route element={<AdminProtectedRoute />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/module-management" element={<ModuleManagement />} />
+            <Route path="/admin/quiz-management" element={<QuizManagement />} />
+            <Route path="/admin/user-management" element={<UserManagement />} />
+            <Route path="/admin/reports" element={<Reports />} />
+            <Route path="/admin/book-management" element={<BookManagement />} />
+            <Route path="/admin/voice-exam-management" element={<VoiceExamManagement />} />
+            <Route path="/admin/profile" element={<AdminProfile />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Route>
+      </Routes>
+    );
+  }
+
+  return <UserLayout isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
 };
 
 class ErrorBoundary extends React.Component {
