@@ -14,7 +14,7 @@ export const useAdminWS = () => {
 
   const connect = () => {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const host = window.location.host === 'localhost:5174' ? 'localhost:4000' : window.location.host;
+    const host = window.location.host;
     const wsUrl = `${proto}://${host}/ws/admin`;
 
     refreshToken().then((token) => {

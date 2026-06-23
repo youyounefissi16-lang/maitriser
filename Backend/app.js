@@ -64,7 +64,7 @@ app.options('*', (req, res) => res.status(204).end());
 app.use(express.json({ limit: '1mb' }));
 
 const globalLimiter = rateLimit({
-  windowMs: 60 * 1000, max: 200,
+  windowMs: 60 * 1000, max: 1000,
   message: { message: 'Too many requests, slow down.' },
   standardHeaders: true, legacyHeaders: false,
 });
@@ -95,7 +95,7 @@ app.get('/api/health', (req, res) => {
 });
 
 const userLimiter = rateLimit({
-  windowMs: 60 * 1000, max: 60,
+  windowMs: 60 * 1000, max: 300,
   keyGenerator: (req) => req.user?.userId || req.ip,
   message: { message: 'Too many requests, slow down.' },
 });

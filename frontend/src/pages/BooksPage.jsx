@@ -65,7 +65,8 @@ const BooksPage = () => {
       if (debouncedSearch.trim()) url += `search=${encodeURIComponent(debouncedSearch.trim())}&`;
       const res  = await fetchWithAuth(url, signal ? { signal } : undefined);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setBooks(await res.json());
+      const data = await res.json();
+      setBooks(data.data || (Array.isArray(data) ? data : []));
     } catch (err) {
       if (err.name === 'AbortError') return;
       logger.error({ err }, 'BooksPage fetchBooks failed');

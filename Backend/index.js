@@ -59,7 +59,7 @@ process.on('unhandledRejection', (reason) => {
 process.on('SIGTERM', () => { logger.info('SIGTERM received — shutting down'); gracefulShutdown(0); });
 process.on('SIGINT', () => { logger.info('SIGINT received — shutting down'); gracefulShutdown(0); });
 
-server = app.listen(PORT, () => {
-  logger.info({ port: PORT }, `Server running at http://localhost:${PORT}`);
+server = app.listen(PORT, '0.0.0.0', () => {
+  logger.info({ port: PORT }, `Server running at http://0.0.0.0:${PORT}`);
   initWS(server);
 });

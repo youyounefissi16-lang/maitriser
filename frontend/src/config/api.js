@@ -1,7 +1,7 @@
 import { getToken, refreshToken } from '../utils/tokenStore';
 import { logger } from '../utils/logger';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export const authHeaders = () => {
   const token = getToken();

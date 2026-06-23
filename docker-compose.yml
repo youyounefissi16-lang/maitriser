@@ -16,14 +16,17 @@ services:
       - mongodb
     environment:
       MONGODB_URI: mongodb://mongodb:27017/quizapp
-      JWT_SECRET: ${JWT_SECRET}
-      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
-      ADMIN_SECRET_CODE: ${ADMIN_SECRET_CODE}
+      JWT_SECRET: "any_long_random_string_here_for_dev"
+      CLERK_SECRET_KEY: "sk_test_1yfgfzYHhegK54MNsETjClxtxiP8R5Lbyy2XRgrESu"
+      ADMIN_SECRET_CODE: "youcef16_demo_secret!"
       PORT: "4000"
-      CORS_ORIGIN: "http://localhost:5173"
+      CORS_ORIGIN: "*"
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ""
     restart: unless-stopped
     ports:
       - "5173:80"

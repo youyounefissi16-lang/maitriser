@@ -1,4 +1,4 @@
-import React, { useState, useRef, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom';
 import { ClerkProvider, useAuth } from "@clerk/react";
 import Home from './pages/Home';
@@ -154,7 +154,7 @@ const AppContent = () => {
   const ready = useClerkToken();
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/admin/setup';
-  const [isDarkMode, setIsDarkMode] = useState(() => { try { return localStorage.getItem('darkMode') === 'true'; } catch { return false; } });
+  const [isDarkMode, setIsDarkMode] = useState(() => { try { return localStorage.getItem('darkMode') !== 'false'; } catch { return true; } });
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
   if (!ready) return <LoadingPage />;
