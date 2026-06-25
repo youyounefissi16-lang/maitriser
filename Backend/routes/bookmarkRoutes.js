@@ -2,17 +2,18 @@ import express from 'express';
 import Bookmark from '../models/bookmarkModel.js';
 import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
+import { verifyToken } from '../controllers/authController.js';
 
 const router = express.Router();
 
-router.get('/bookmarks', catchAsync(async (req, res) => {
+router.get('/bookmarks', verifyToken, catchAsync(async (req, res) => {
   const userId = req.user?.userId;
   if (!userId) return res.status(400).json({ message: 'userId required' });
   const bookmarks = await Bookmark.find({ userId }).populate('quizId', 'quizId question questionText');
   res.json(bookmarks);
 }));
 
-router.post('/bookmarks/toggle', catchAsync(async (req, res) => {
+router.post('/bookmarks/toggle', verifyToken, catchAsync(async (req, res) => {
   const userId = req.user?.userId;
   const { quizId } = req.body;
   if (!userId || !quizId || typeof quizId !== 'string') return res.status(400).json({ message: 'userId and quizId required' });
@@ -26,7 +27,7 @@ router.post('/bookmarks/toggle', catchAsync(async (req, res) => {
   res.json({ bookmarked: true });
 }));
 
-router.get('/bookmarks/:quizId', catchAsync(async (req, res) => {
+router.get('/bookmarks/:quizId', verifyToken, catchAsync(async (req, res) => {
   const userId = req.user?.userId;
   if (!userId) return res.status(400).json({ message: 'userId required' });
   if (typeof req.params.quizId !== 'string') return res.status(400).json({ message: 'Invalid quizId' });

@@ -1,100 +1,97 @@
-/* General container styling */
-.help-container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 20px;
-  margin-top: 40px;
-  font-family: Arial, sans-serif;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Text styling */
-.text {
-  color: #333;
-  font-size: 18px;
-  line-height: 1.6;
-  margin-bottom: 10px;
-}
-
-/* Heading styles */
 .help-heading {
   font-size: 36px;
   text-align: center;
-  color: #3a3ae8;
-  margin-bottom: 30px;
-  font-weight: bold;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  color: var(--teal-dark);
+  margin-bottom: 32px;
+  font-weight: 800;
 }
 
-.section {
-  margin-bottom: 25px;
-  padding: 15px;
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.help-section {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
-.section h2 {
-  font-size: 24px;
-  color: #222;
-  margin-bottom: 10px;
-  font-weight: bold;
-}
-
-.section p {
+.help-section h2 {
   font-size: 18px;
-  color: #555;
-  margin-bottom: 10px;
+  color: var(--teal-dark);
+  margin: 0 0 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-/* List styling */
-ul {
-  list-style-type: disc;
-  margin-left: 20px;
+.help-section h2 .help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: rgba(193, 255, 48, 0.12);
+  flex-shrink: 0;
+}
+
+.help-section p,
+.help-section li {
+  font-size: 14px;
+  color: var(--text-body);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.help-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+.help-section ul li {
+  padding: 6px 0;
   padding-left: 20px;
+  position: relative;
 }
 
-ul li {
-  font-size: 18px;
-  color: #555;
-  margin-bottom: 8px;
+.help-section ul li::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: var(--teal-accent);
+  font-weight: 700;
 }
 
-/* Link styling */
-.section a {
-  color: #3a3ae8;
+.help-section a {
+  color: var(--teal-dark);
   text-decoration: none;
+  font-weight: 600;
 }
 
-.section a:hover {
+.help-section a:hover {
   text-decoration: underline;
 }
 
-/* Footer styling */
-.footer {
-  text-align: center;
-  margin-top: 30px;
-  font-size: 16px;
-  color: #777;
+.help-faq q {
+  display: block;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin: 12px 0 4px;
+  font-style: normal;
 }
 
-/* Responsive design */
+.help-faq q::before {
+  content: 'Q: ';
+  color: var(--teal-accent);
+}
+
 @media (max-width: 768px) {
-  .help-container {
-      padding: 15px;
-  }
-
   .help-heading {
-      font-size: 28px;
+    font-size: 28px;
   }
-
-  .section h2 {
-      font-size: 20px;
-  }
-
-  .text, ul li {
-      font-size: 16px;
+  .help-section {
+    padding: 16px;
   }
 }

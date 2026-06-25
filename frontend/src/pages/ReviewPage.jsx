@@ -53,24 +53,24 @@ const ReviewPage = () => {
       <div className="card-teal">
         <h2>🔄 Spaced Repetition — Review Failed Questions</h2>
         {error ? (
-          <div className="empty-state" style={{ color: '#e74c3c' }}>
+          <div className="empty-state" style={{ color: 'var(--color-danger)' }}>
                 <p>Error loading: {error}</p>
                 <button type="button" className="btn-primary" onClick={fetchResults} style={{ marginTop: '12px' }}>Retry</button>
           </div>
         ) : wrongAnswers.length === 0 ? (
           <div className="empty-state">
             <p style={{ fontSize: '16px', marginBottom: '8px' }}>No questions to review!</p>
-            <p style={{ color: '#888' }}>All previously failed questions have been retried successfully, or you haven't attempted any quizzes yet.</p>
+            <p style={{ color: 'var(--text-muted)' }}>All previously failed questions have been retried successfully, or you haven't attempted any quizzes yet.</p>
           </div>
         ) : (
           <>
-            <p style={{ color: '#555', marginBottom: '16px' }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>
               {wrongAnswers.length} question{wrongAnswers.length > 1 ? 's' : ''} to review. Questions you answered incorrectly are shown here for spaced repetition — retry them to strengthen your memory before the exam.
             </p>
             {wrongAnswers.map((r) => {
               const quiz = r.quizId;
               return (
-                <div key={r._id} className="quiz-card-item" style={{ borderLeft: '4px solid #e74c3c' }}>
+                <div key={r._id} className="quiz-card-item" style={{ borderLeft: '4px solid var(--color-danger)' }}>
                   <div className="qid">{quiz.quizId || ''}</div>
                   <h3>{quiz.question?.questionText?.substring(0, 80) || quiz._id}</h3>
                   <div className="qmeta">

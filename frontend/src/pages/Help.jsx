@@ -1,40 +1,85 @@
 import React from 'react';
+import { useTranslation } from '../context/LanguageContext';
 import '../styles/pagesStyle/help.css';
 import '../styles/teal-theme.css';
 
+const Icon = ({ children }) => (
+  <span className="help-icon">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+  </span>
+);
+
 const HelpPage = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="card-teal" style={{ maxWidth: '720px' }}>
-      <h1 className="help-heading">Aide et Support</h1>
+      <div className="card-teal" style={{ maxWidth: '720px', width: '100%' }}>
+        <h1 className="help-heading">{t('help.title')}</h1>
 
-      <section className="section">
-        <h2>Comment jouer</h2>
-        <p className='text'>Pour commencer, sélectionnez une spécialité et choisissez votre niveau. Une fois prêt, cliquez sur "Commencer" et répondez aux questions. Vous pouvez sélectionner une ou plusieurs réponses selon la question. Après avoir soumis le QCM, votre score s'affichera.</p>
-      </section>
+        <div className="help-section">
+          <h2><Icon><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></Icon>{t('help.getStarted')}</h2>
+          <p>{t('help.getStarted.text')}</p>
+        </div>
 
-      <section className="section">
-        <h2>Système de notation</h2>
-        <p className='text'>Vous obtenez des points pour chaque réponse correcte. Il n'y a pas de pénalité pour les réponses incorrectes. Votre score final est affiché à la fin de chaque QCM. Un minuteur vous aide à gérer votre temps.</p>
-      </section>
+        <div className="help-section">
+          <h2><Icon><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></Icon>{t('help.mcqs')}</h2>
+          <p>{t('help.mcqs.text')}</p>
+        </div>
 
-      <section className="section">
-        <h2>Examens Oraux</h2>
-        <p className='text'>La fonction d'examen oral vous permet de pratiquer des cas cliniques. Enregistrez votre réponse vocale, qui sera transcrite et comparée à la réponse modèle. Vous pouvez choisir entre le mode Pratique (feedback immédiat) et le mode Examen (score à la fin).</p>
-      </section>
+        <div className="help-section">
+          <h2><Icon><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></Icon>{t('help.mockExam')}</h2>
+          <p>{t('help.mockExam.text')}</p>
+        </div>
 
-      <section className="section">
-        <h2>Questions fréquentes</h2>
-        <ul>
-          <li className='text'><strong>Comment réinitialiser mon score ?</strong> Le score et l'historique ne peuvent pas être réinitialisés.</li>
-          <li className='text'><strong>Comment contacter le support ?</strong> Vous pouvez nous contacter par email à support@maitrisez.com.</li>
-        </ul>
-      </section>
+        <div className="help-section">
+          <h2><Icon><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></Icon>{t('help.oralExam')}</h2>
+          <p>{t('help.oralExam.text')}</p>
+        </div>
 
-      <section className="section">
-        <h2>Contacter le support</h2>
-        <p className='text'>Si vous avez des problèmes ou des questions, n'hésitez pas à nous contacter à <a href="mailto:support@maitrisez.com">support@maitrisez.com</a>.</p>
-      </section>
+        <div className="help-section">
+          <h2><Icon><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></Icon>{t('help.library')}</h2>
+          <p>{t('help.library.text')}</p>
+        </div>
+
+        <div className="help-section">
+          <h2><Icon><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></Icon>{t('help.bookmarks')}</h2>
+          <p>{t('help.bookmarks.text')}</p>
+        </div>
+
+        <div className="help-section">
+          <h2><Icon><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></Icon>{t('help.results')}</h2>
+          <p>{t('help.results.text')}</p>
+        </div>
+
+        <div className="help-section">
+          <h2><Icon><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></Icon>{t('help.feedback')}</h2>
+          <p>{t('help.feedback.text')}</p>
+        </div>
+
+        <div className="help-section help-faq">
+          <h2><Icon><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></Icon>{t('help.faq')}</h2>
+          <ul>
+            <li>
+              <q>{t('help.faq.q1')}</q>
+              <p>{t('help.faq.a1')}</p>
+            </li>
+            <li>
+              <q>{t('help.faq.q2')}</q>
+              <p>{t('help.faq.a2')} <a href="mailto:support@maitrisez.com">support@maitrisez.com</a></p>
+            </li>
+            <li>
+              <q>{t('help.faq.q3')}</q>
+              <p>{t('help.faq.a3')}</p>
+            </li>
+          </ul>
+        </div>
+
+        <div className="help-section">
+          <h2><Icon><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></Icon>{t('help.contact')}</h2>
+          <p>{t('help.contact.text')} <a href="mailto:support@maitrisez.com">support@maitrisez.com</a>.</p>
+          <p style={{ marginTop: 8, fontSize: 13, color: 'var(--text-muted)' }}>{t('help.contact.feedbackHint')}</p>
+        </div>
       </div>
     </div>
   );

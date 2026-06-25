@@ -123,7 +123,7 @@ const Recorder = ({ onAudioReady, onTranscript }) => {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
       {state === 'idle' && (
-        <button type="button" onClick={startRecording} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #ccc', background: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+        <button type="button" onClick={startRecording} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border-light)', background: 'var(--card-bg)', color: 'var(--text-dark)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
           🎤 Enregistrer
         </button>
       )}
@@ -132,7 +132,7 @@ const Recorder = ({ onAudioReady, onTranscript }) => {
           <button type="button" onClick={stopRecording} style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#e74c3c', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
             🔴 Arrêter
           </button>
-          <span style={{ fontSize: 11, color: transcribing ? '#0C4A4A' : '#999' }}>
+          <span style={{ fontSize: 11, color: transcribing ? 'var(--teal-accent)' : 'var(--text-muted)' }}>
             {transcribing ? '🎤 Transcription en cours...' : '⏳ En attente de voix'}
           </span>
         </>
@@ -140,7 +140,7 @@ const Recorder = ({ onAudioReady, onTranscript }) => {
       {state === 'done' && audioUrl && (
         <>
           <audio src={audioUrl} controls style={{ height: 36 }} />
-          <button type="button" onClick={() => { setState('idle'); setAudioUrl(null); if (onAudioReady) onAudioReady(null, null); }} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #ccc', background: '#fff', cursor: 'pointer', fontSize: 11 }}>
+          <button type="button" onClick={() => { setState('idle'); setAudioUrl(null); if (onAudioReady) onAudioReady(null, null); }} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-light)', background: 'var(--card-bg)', color: 'var(--text-dark)', cursor: 'pointer', fontSize: 11 }}>
             ✕ Supprimer
           </button>
           {unsupported && <span style={{ fontSize: 11, color: '#e67e22' }}>Saisie manuelle uniquement (Chrome recommandé)</span>}
@@ -228,7 +228,7 @@ const VoiceExam = ({ exam, onBack }) => {
   return (
     <div className="quiz-container-teal">
       <div style={{ marginBottom: 16 }}>
-        <button type="button" onClick={onBack} style={{ background: 'none', border: '1px solid #ccc', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 13 }}>
+        <button type="button" onClick={onBack} style={{ background: 'none', border: '1px solid var(--border-light)', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 13, color: 'var(--text-dark)' }}>
           &larr; Retour
         </button>
       </div>
@@ -236,13 +236,13 @@ const VoiceExam = ({ exam, onBack }) => {
       <p style={{ fontSize: 12, color: '#f97316', fontWeight: 'bold', margin: '0 0 8px' }}>EXAMEN ORAL</p>
       <h3 style={{ margin: '0 0 16px' }}>{exam.title}</h3>
 
-      <div style={{ background: '#f8f9fa', padding: 14, borderRadius: 6, marginBottom: 20 }}>
+      <div style={{ background: 'var(--color-bg)', padding: 14, borderRadius: 6, marginBottom: 20 }}>
         <p style={{ margin: '0 0 12px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{exam.clinicalCasePrompt}</p>
         {exam.images && exam.images.length > 0 && (
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             {exam.images.map((img, i) => (
               <img key={i} src={`${API_BASE_URL}/api/voice-exam-images/${img}`} alt={`Image ${i + 1}`} loading="lazy"
-                style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, objectFit: 'contain', border: '1px solid #ddd' }}
+                style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8, objectFit: 'contain', border: '1px solid var(--border-light)' }}
               />
             ))}
           </div>
@@ -250,7 +250,7 @@ const VoiceExam = ({ exam, onBack }) => {
       </div>
 
       {!result && questions.map((q, qi) => (
-        <div key={qi} className="voice-exam-question" style={{ marginBottom: 16, padding: 14, background: '#fff', borderRadius: 8, border: '1px solid #e0e0e0' }}>
+        <div key={qi} className="voice-exam-question" style={{ marginBottom: 16, padding: 14, background: 'var(--card-bg)', borderRadius: 8, border: '1px solid var(--border-light)' }}>
           <p style={{ fontWeight: 600, margin: '0 0 8px' }}>Q{qi + 1}. {q.questionText}</p>
           <Recorder onTranscript={(text) => setAnswer(qi, text)} />
           <textarea
@@ -258,7 +258,7 @@ const VoiceExam = ({ exam, onBack }) => {
             value={answers[qi]?.text || ''}
             onChange={(e) => setAnswer(qi, e.target.value)}
             rows={4}
-            style={{ width: '100%', padding: 10, border: '1px solid #ccc', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', marginTop: 8 }}
+            style={{ width: '100%', padding: 10, border: '1px solid var(--border-light)', borderRadius: 6, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', marginTop: 8, background: 'var(--card-bg)', color: 'var(--text-dark)' }}
           />
         </div>
       ))}
@@ -268,7 +268,7 @@ const VoiceExam = ({ exam, onBack }) => {
           type="button"
           onClick={handleSubmit}
           disabled={submitting}
-          style={{ padding: '10px 24px', borderRadius: 6, border: 'none', background: '#0C4A4A', color: '#fff', fontWeight: 'bold', cursor: 'pointer', opacity: submitting ? 0.7 : 1 }}
+          style={{ padding: '10px 24px', borderRadius: 6, border: 'none', background: 'var(--teal-dark)', color: '#fff', fontWeight: 'bold', cursor: 'pointer', opacity: submitting ? 0.7 : 1 }}
         >
           {submitting ? 'Soumission...' : 'Soumettre les réponses'}
         </button>
@@ -280,7 +280,7 @@ const VoiceExam = ({ exam, onBack }) => {
         <div style={{ marginTop: 20 }}>
           <div className="voice-exam-result-box" style={{
             padding: 16, borderRadius: 8, marginBottom: 16, textAlign: 'center', fontSize: 18, fontWeight: 700,
-            background: allPassed ? '#d4edda' : '#f8d7da', color: allPassed ? '#155724' : '#721c24',
+            background: allPassed ? 'rgba(193,255,48,0.15)' : 'rgba(239,68,68,0.15)', color: allPassed ? 'var(--color-success)' : 'var(--color-danger)',
           }}>
             {allPassed ? '✅ Réponse correcte !' : '❌ Réponse incorrecte'}
             <span style={{ display: 'block', fontSize: 13, fontWeight: 400, marginTop: 4 }}>
@@ -292,17 +292,17 @@ const VoiceExam = ({ exam, onBack }) => {
             const a = result.answers?.[qi];
             if (!a) return null;
             return (
-              <div key={qi} style={{ marginBottom: 16, padding: 14, borderRadius: 8, border: '1px solid #e0e0e0', background: '#fff' }}>
+              <div key={qi} style={{ marginBottom: 16, padding: 14, borderRadius: 8, border: '1px solid var(--border-light)', background: 'var(--card-bg)' }}>
                 <p style={{ fontWeight: 600, margin: '0 0 8px' }}>Q{qi + 1}. {q.questionText}</p>
-                <p style={{ fontStyle: 'italic', color: '#555', margin: '0 0 10px', padding: 8, background: '#f5f5f5', borderRadius: 4 }}>
+                <p style={{ fontStyle: 'italic', color: 'var(--text-muted)', margin: '0 0 10px', padding: 8, background: 'var(--color-bg)', borderRadius: 4 }}>
                   « {a.text} »
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
                   {a.criteriaResults.map((cr, ci) => (
                     <div key={ci} className="voice-exam-criteria" style={{
                       padding: '4px 10px', borderRadius: 4, fontSize: 13,
-                      background: cr.passed ? '#d4edda' : '#f8d7da',
-                      color: cr.passed ? '#155724' : '#721c24',
+                      background: cr.passed ? 'rgba(193,255,48,0.15)' : 'rgba(239,68,68,0.15)',
+                      color: cr.passed ? 'var(--color-success)' : 'var(--color-danger)',
                       fontWeight: 500,
                     }}>
                       {cr.passed ? '✓' : '✗'} {cr.label}
@@ -312,12 +312,12 @@ const VoiceExam = ({ exam, onBack }) => {
                 <button
                   type="button"
                   onClick={() => setShowModel((prev) => ({ ...prev, [qi]: !prev[qi] }))}
-                  style={{ background: 'none', border: '1px solid #0C4A4A', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 12, color: '#0C4A4A' }}
+                  style={{ background: 'none', border: '1px solid var(--teal-dark)', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 12, color: 'var(--teal-dark)' }}
                 >
                   {showModel[qi] ? 'Masquer' : 'Voir le modèle de réponse'}
                 </button>
                 {showModel[qi] && (
-                  <div style={{ marginTop: 8, padding: 10, background: '#eaf4fb', borderRadius: 6, fontSize: 13 }}>
+                  <div style={{ marginTop: 8, padding: 10, background: 'var(--color-bg)', borderRadius: 6, fontSize: 13, color: 'var(--text-body)' }}>
                     {q.idealAnswer || 'Aucune réponse modèle fournie.'}
                   </div>
                 )}
@@ -328,7 +328,7 @@ const VoiceExam = ({ exam, onBack }) => {
           <button
             type="button"
             onClick={() => { setResult(null); setAnswers(questions.map(() => ({ text: '' }))); setError(''); }}
-            style={{ padding: '10px 24px', borderRadius: 6, border: '1px solid #ccc', background: '#fff', cursor: 'pointer', fontWeight: 600 }}
+            style={{ padding: '10px 24px', borderRadius: 6, border: '1px solid var(--border-light)', background: 'var(--card-bg)', color: 'var(--text-dark)', cursor: 'pointer', fontWeight: 600 }}
           >
             Réessayer
           </button>

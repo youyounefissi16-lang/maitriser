@@ -6,7 +6,7 @@ import fs from 'fs';
 import VoiceExam from '../models/voiceExamModel.js';
 import VoiceExamResult from '../models/voiceExamResultModel.js';
 import Module from '../models/moduleModel.js';
-import { requireAdmin } from '../controllers/authController.js';
+import { verifyToken, requireAdmin } from '../controllers/authController.js';
 import { cacheMiddleware, delPattern } from '../utils/cache.js';
 import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
@@ -134,7 +134,7 @@ router.get('/voice-exam-images/:filename', (req, res) => {
   res.sendFile(filepath);
 });
 
-router.post('/voice-exams/:id/submit', [
+router.post('/voice-exams/:id/submit', verifyToken, [
   param('id').isMongoId(),
 ], validate, catchAsync(async (req, res) => {
   const { answers } = req.body;
@@ -183,7 +183,7 @@ router.post('/voice-exams/:id/submit', [
   });
 }));
 
-router.get('/voice-exam-results/:userId', catchAsync(async (req, res) => {
+router.get('/voice-exam-results/:userId', verifyToken, catchAsync(async (req, res) => {
   if (req.user.role !== 'admin' && req.user.userId !== req.params.userId)
     return res.status(403).json({ message: 'Access denied' });
   const { skip, limit, page } = getPagination(req.query);
@@ -196,7 +196,7 @@ router.get('/voice-exam-results/:userId', catchAsync(async (req, res) => {
   res.json(paginatedResponse(results, total, page, limit));
 }));
 
-router.get('/voice-exam-results/:userId/:resultId', catchAsync(async (req, res) => {
+router.get('/voice-exam-results/:userId/:resultId', verifyToken, catchAsync(async (req, res) => {
   const result = await VoiceExamResult.findById(req.params.resultId).populate('examId');
   if (!result) return res.status(404).json({ message: 'Result not found' });
   if (req.user.role !== 'admin' && result.userId !== req.params.userId)

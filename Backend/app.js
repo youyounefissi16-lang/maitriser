@@ -19,6 +19,7 @@ import userAuthRoutes from './routes/userAuthRoutes.js';
 import emailAuthRoutes from './routes/emailAuthRoutes.js';
 import clerkRoutes from './routes/clerkRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import feedbackRoutes from './routes/feedbackRoutes.js';
 import { verifyToken, requireAdmin } from './controllers/authController.js';
 
 const app = express();
@@ -114,6 +115,7 @@ app.use('/api', verifyToken, userLimiter, bookRoutes);
 app.use('/api', verifyToken, userLimiter, voiceExamRoutes);
 app.use('/api', verifyToken, userLimiter, moduleRoutes);
 app.use('/api', verifyToken, userLimiter, bookmarkRoutes);
+app.use('/api/feedback', verifyToken, userLimiter, feedbackRoutes);
 
 app.use('/api', verifyToken, requireAdmin, userRoutes);
 app.use('/api', verifyToken, requireAdmin, dashboardRoutes);

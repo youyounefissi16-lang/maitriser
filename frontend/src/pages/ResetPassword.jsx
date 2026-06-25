@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { useTranslation } from '../context/LanguageContext';
 import { API_BASE_URL } from '../config/api';
 import '../styles/teal-theme.css';
 
 const ResetPassword = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -20,36 +22,36 @@ const ResetPassword = () => {
         body: JSON.stringify({ token, password }),
       });
       const data = await res.json();
-      if (res.ok) setMessage('Mot de passe réinitialisé avec succès !');
-      else setMessage(data.message || 'Échec de la réinitialisation.');
+      if (res.ok) setMessage(t('reset.success'));
+      else setMessage(data.message || t('reset.error.generic'));
     } catch {
-      setMessage('Erreur réseau.');
+      setMessage(t('reset.error.generic'));
     } finally { setLoading(false); }
   };
 
   return (
     <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
       <div className="card-teal" style={{ maxWidth: 400, padding: '2rem' }}>
-        <h2>Réinitialiser le mot de passe</h2>
+        <h2>{t('reset.title')}</h2>
         {!token ? (
-          <p style={{ color: 'var(--color-danger)' }}>Lien invalide ou expiré.</p>
+          <p style={{ color: 'var(--color-danger)' }}>{t('reset.error.generic')}</p>
         ) : (
           <form onSubmit={handleSubmit}>
             <input type="password" className="form-input" value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder="Nouveau mot de passe (min 8 caractères)" required minLength={8}
+              placeholder={t('reset.password')} required minLength={8}
               style={{ width: '100%', marginBottom: 12 }} />
             <button className="btn-primary" disabled={loading} style={{ width: '100%' }}>
-              {loading ? 'Réinitialisation…' : 'Réinitialiser'}
+              {loading ? t('reset.loading') : t('reset.button')}
             </button>
           </form>
         )}
         {message && (
-          <p style={{ marginTop: 12, color: message.includes('succès') ? 'var(--color-success)' : 'var(--text-muted)' }}>
+          <p style={{ marginTop: 12, color: message === t('reset.success') ? 'var(--color-success)' : 'var(--text-muted)' }}>
             {message}
           </p>
         )}
-        {message.includes('succès') && (
-          <p style={{ marginTop: 12, textAlign: 'center' }}><Link to="/login">Se connecter</Link></p>
+        {message === t('reset.success') && (
+          <p style={{ marginTop: 12, textAlign: 'center' }}><Link to="/login">{t('nav.login')}</Link></p>
         )}
       </div>
     </div>

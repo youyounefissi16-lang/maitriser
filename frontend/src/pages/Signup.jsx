@@ -1,9 +1,11 @@
 import React from 'react';
 import { SignUp } from "@clerk/react";
+import { useTranslation } from '../context/LanguageContext';
 import '../styles/pagesStyle/login.css';
 import '../styles/teal-theme.css';
 
 const Signup = () => {
+  const { t } = useTranslation();
   return (
     <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
       <div className="login-container">
@@ -23,8 +25,8 @@ const Signup = () => {
         </div>
         <div className="vertical-line"></div>
         <div className="description">
-          <h2>Créez votre compte</h2>
-          <p>Rejoignez MAITRISEZ pour tester vos connaissances dans diverses matières.</p>
+          <h2>{t('signup.title')}</h2>
+          <p>{t('signup.subtitle')}</p>
         </div>
       </div>
     </div>

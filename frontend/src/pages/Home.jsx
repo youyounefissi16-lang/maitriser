@@ -17,8 +17,7 @@ export default function Home({ toggleDarkMode, isDarkMode }) {
     <div className="landing">
       <nav className="landing-nav">
         <div className="nav-left">
-          <span className="nav-logo-icon">M</span>
-          <span className="nav-logo-text">MAITRISEZ</span>
+          <img src="/logo.png" alt="MAITRISEZ" className="nav-logo-img" />
         </div>
         <div className="nav-center">
           <a href="#features">{t('home.nav.features')}</a>
@@ -55,7 +54,7 @@ export default function Home({ toggleDarkMode, isDarkMode }) {
       </section>
 
       <footer className="landing-footer">
-        <span className="footer-brand">MAITRISEZ</span>
+        <img src="/logo.png" alt="MAITRISEZ" className="footer-logo-img" />
       </footer>
 
       <button className="fab" onClick={() => navigate('/help')} title="Aide">?</button>

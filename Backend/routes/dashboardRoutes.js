@@ -9,10 +9,11 @@ import Case from '../models/caseModel.js';
 import Book from '../models/bookModel.js';
 import Contact from '../models/contactModel.js';
 import { catchAsync } from '../utils/asyncHandler.js';
+import { verifyToken, requireAdmin } from '../controllers/authController.js';
 
 const router = express.Router();
 
-router.get('/dashboard-stats', catchAsync(async (req, res) => {
+router.get('/dashboard-stats', verifyToken, requireAdmin, catchAsync(async (req, res) => {
   const [
     totalUsers, totalQuizzes, totalModules,
     totalAttempts, totalVoiceExams, totalVoiceResults,

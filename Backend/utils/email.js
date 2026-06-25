@@ -49,7 +49,7 @@ function verificationEmailHtml(token, baseUrl) {
   const link = `${baseUrl}/verify-email?token=${token}`;
   return `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-      <h2 style="color: #0C4A4A;">Verify your email</h2>
+      <h2 style="color: #04484F;">Verify your email</h2>
       <p>Click the link below to verify your email address:</p>
       <a href="${link}" style="display: inline-block; padding: 12px 24px; background: #14a3a8; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Verify Email</a>
       <p style="margin-top: 24px; font-size: 13px; color: #888;">This link expires in 1 hour.</p>
@@ -60,7 +60,7 @@ function resetPasswordHtml(token, baseUrl) {
   const link = `${baseUrl}/reset-password?token=${token}`;
   return `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-      <h2 style="color: #0C4A4A;">Reset your password</h2>
+      <h2 style="color: #04484F;">Reset your password</h2>
       <p>Click the link below to reset your password:</p>
       <a href="${link}" style="display: inline-block; padding: 12px 24px; background: #14a3a8; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">Reset Password</a>
       <p style="margin-top: 24px; font-size: 13px; color: #888;">This link expires in 1 hour. If you did not request this, ignore this email.</p>

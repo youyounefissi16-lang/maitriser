@@ -5,12 +5,13 @@ import { useToast } from '../components/Toast';
 import { useSound } from '../context/SoundContext';
 import { logger } from '../utils/logger';
 import '../styles/userManagement.css';
-import { FaSearch, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaSearch, FaEdit, FaTrash, FaHistory } from 'react-icons/fa';
 import AddUserModal from '../components/AddUserModal';
 import EditUserModal from '../components/EditUserModal';
 import ConfirmModal from '../components/ConfirmModal';
 import Spinner from '../components/Spinner';
 import Pagination from '../components/Pagination';
+import UserHistoryModal from '../components/UserHistoryModal';
 
 const UserManagement = () => {
   const notify = useToast();
@@ -24,6 +25,7 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [historyUser, setHistoryUser] = useState(null);
   const submittingRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState(1);
@@ -121,7 +123,7 @@ const UserManagement = () => {
       <div className="header">
         <h2>User Management</h2>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" className="add-user-btn" onClick={handleSync} disabled={submitting} style={{ background: '#0C4A4A' }}>
+          <button type="button" className="add-user-btn" onClick={handleSync} disabled={submitting} style={{ background: 'var(--dc-dark)' }}>
             Sync from Clerk
           </button>
           <button type="button" className="add-user-btn" onClick={handleAddUser}>
@@ -159,6 +161,7 @@ const UserManagement = () => {
                 <td>{user.email}</td>
                 <td>{user.role}</td>
                 <td>
+                  <button type="button" onClick={() => setHistoryUser(user)} className="history-btn" title="View Results"><FaHistory /></button>
                   <button type="button" onClick={() => handleEdit(user)} className="edit-btn"><FaEdit /></button>
                   <button type="button" onClick={() => setDeleteTarget(user)} className="delete-btn"><FaTrash /></button>
                 </td>
@@ -175,6 +178,8 @@ const UserManagement = () => {
       {!isAddingUser && showModal && selectedUser && (
         <EditUserModal user={selectedUser} setShowModal={setShowModal} fetchUsers={fetchUsers} />
       )}
+
+      {historyUser && <UserHistoryModal user={historyUser} onClose={() => setHistoryUser(null)} />}
 
       <ConfirmModal
         open={!!deleteTarget}

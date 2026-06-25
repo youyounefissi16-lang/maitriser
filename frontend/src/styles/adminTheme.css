@@ -3,9 +3,9 @@
   --dc-dark: #1a1a2e;
   --dc-deeper: #16213e;
   --dc-deep: #0f3460;
-  --dc-accent: #533483;
-  --dc-accent-light: #7b4fc2;
-  --dc-highlight: #e94560;
+  --dc-accent: #C1FF30;
+  --dc-accent-light: #D4FF66;
+  --dc-highlight: #FF5205;
   --dc-cream: #f0f7e8;
   --dc-cream-light: #f4faf0;
   --dc-cream-dark: #d0e8c0;
@@ -20,8 +20,8 @@
   --dc-radius-sm: 10px;
   --dc-sidebar-text: rgba(255, 248, 240, 0.8);
   --dc-sidebar-border: rgba(255, 248, 240, 0.05);
-  --dc-sidebar-hover: rgba(83, 52, 131, 0.3);
-  --dc-sidebar-active: rgba(83, 52, 131, 0.4);
+  --dc-sidebar-hover: rgba(193, 255, 48, 0.15);
+  --dc-sidebar-active: rgba(193, 255, 48, 0.25);
   --dc-header-shadow: 0 4px 16px rgba(13, 13, 26, 0.3);
   --dc-overlay: rgba(13, 13, 26, 0.6);
 }
@@ -39,8 +39,8 @@
   --dc-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
   --dc-sidebar-text: rgba(255, 255, 255, 0.9);
   --dc-sidebar-border: rgba(255, 255, 255, 0.1);
-  --dc-sidebar-hover: rgba(123, 79, 194, 0.25);
-  --dc-sidebar-active: rgba(123, 79, 194, 0.35);
+  --dc-sidebar-hover: rgba(193, 255, 48, 0.15);
+  --dc-sidebar-active: rgba(193, 255, 48, 0.25);
   --dc-header-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   --dc-overlay: rgba(0, 0, 0, 0.7);
 }

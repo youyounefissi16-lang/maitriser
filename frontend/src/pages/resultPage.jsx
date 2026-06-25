@@ -51,7 +51,7 @@ const ResultPage = () => {
   }, [userId]);
 
   if (loading) return <div className="page-teal"><div className="card-teal"><SkeletonQuizItem count={4} /></div></div>;
-  if (error)   return <div className="page-teal"><div className="card-teal" style={{ textAlign: 'center', color: '#e74c3c' }}><p>{t('error')} : {error}</p><button type="button" className="btn-primary" onClick={() => fetchResults(1)} style={{ marginTop: '12px' }}>{t('quiz.retry')}</button></div></div>;
+  if (error)   return <div className="page-teal"><div className="card-teal" style={{ textAlign: 'center', color: 'var(--color-danger)' }}><p>{t('error')} : {error}</p><button type="button" className="btn-primary" onClick={() => fetchResults(1)} style={{ marginTop: '12px' }}>{t('quiz.retry')}</button></div></div>;
 
   const total = results.length;
   const correct = results.filter((r) => r.score === 1).length;
@@ -75,11 +75,11 @@ const ResultPage = () => {
         <h2>📊 {t('nav.results')}</h2>
 
         {total > 0 && (
-          <div style={{ marginBottom: '24px', padding: '20px', background: '#f0fbfc', borderRadius: '14px', textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', fontWeight: 800, color: percentage >= 60 ? '#27ae60' : '#e74c3c' }}>
+          <div style={{ marginBottom: '24px', padding: '20px', background: 'var(--color-info-bg)', borderRadius: '14px', textAlign: 'center' }}>
+            <div style={{ fontSize: '36px', fontWeight: 800, color: percentage >= 60 ? 'var(--color-success)' : 'var(--color-danger)' }}>
               {percentage}%
             </div>
-            <div style={{ fontSize: '14px', color: '#555' }}>
+            <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
               {correct} / {total} {t('mock.correct').toLowerCase()} — {results.length} attempt{results.length > 1 ? 's' : ''}
             </div>
           </div>
@@ -92,12 +92,12 @@ const ResultPage = () => {
               {Object.entries(moduleStats).map(([key, stat]) => {
                 const pct = stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0;
                 return (
-                  <div key={key} className="exam-result-item" style={{ borderLeft: `4px solid ${pct >= 60 ? '#27ae60' : '#e74c3c'}` }}>
-                    <div style={{ fontSize: '12px', color: '#888', marginBottom: '2px' }}>
+                  <div key={key} className="exam-result-item" style={{ borderLeft: `4px solid ${pct >= 60 ? 'var(--color-success)' : 'var(--color-danger)'}` }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '2px' }}>
                       Année {stat.year}{stat.course ? ` — ${stat.course}` : ''}
                     </div>
                     <div className="exam-result-text">{stat.name}</div>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: pct >= 60 ? '#27ae60' : '#e74c3c' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: pct >= 60 ? 'var(--color-success)' : 'var(--color-danger)' }}>
                       {pct}% ({stat.correct}/{stat.total})
                     </div>
                   </div>
@@ -111,7 +111,7 @@ const ResultPage = () => {
         {results.length === 0 ? (
           <div className="empty-state">
             <p>Aucune tentative de QCM pour le moment.</p>
-            <p style={{ color: '#888', fontSize: '13px', marginTop: '4px' }}>Commencez un QCM depuis la page d'accueil pour voir vos résultats ici.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>Commencez un QCM depuis la page d'accueil pour voir vos résultats ici.</p>
           </div>
         ) : (
           <table className="table-teal">
@@ -127,7 +127,7 @@ const ResultPage = () => {
                 <tr key={r._id || i}>
                   <td>{r.quizId?.question?.questionText?.substring(0, 60) || r.quizId?.quizId || r.quizId?._id}</td>
                   <td>
-                    <span style={{ color: r.score === 1 ? '#27ae60' : '#e74c3c', fontWeight: 'bold' }}>
+                    <span style={{ color: r.score === 1 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 'bold' }}>
                       {r.score === 1 ? '✅ Correct' : '❌ Faux'}
                     </span>
                   </td>

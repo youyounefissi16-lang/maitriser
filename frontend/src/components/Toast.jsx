@@ -22,7 +22,7 @@ export const ToastProvider = ({ children }) => {
   const colors = {
     success: '#2e7d32',
     error: '#d32f2f',
-    info: '#0C4A4A',
+    info: '#04484F',
     warning: '#f57c00',
   };
 

@@ -1,6 +1,6 @@
 .footer {
-  background-color: white;
-  color: black;
+  background-color: var(--dc-cream);
+  color: var(--dc-text);
   padding: 20px 10px;
   display: flex;
   justify-content: center;
@@ -37,12 +37,12 @@
 }
 
 .footer-link:hover {
-  color: var(--teal-dark, #08424C);
+  color: var(--teal-dark, #04484F);
   text-decoration: underline;
 }
 
 [data-theme="dark"] .footer-link:hover {
-  color: var(--accent-amber, #EAB308);
+  color: var(--accent-amber, #FF5205);
 }
 
 .footer-social {
@@ -51,22 +51,22 @@
 }
 
 .social-icon {
-  color: black;
+  color: var(--dc-text);
   font-size: 20px;
   text-decoration: none;
   transition: color 0.3s ease;
 }
 
 .social-icon:hover {
-  color: #0077b5; /* LinkedIn blue as hover effect */
+  color: var(--dc-accent);
 }
 
 .social-icon:first-child:hover {
-  color: gray; /* Facebook blue */
+  color: var(--dc-accent);
 }
 
 .social-icon:last-child:hover {
-  color: #0088cc; /* Telegram blue */
+  color: var(--dc-accent);
 }
 
 /* Responsive Design */

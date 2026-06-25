@@ -228,7 +228,7 @@ const QuizCard = () => {
               opacity: timerActive ? 1 : 0.5,
             }}>
               {timerActive ? '⏱' : '⏸'} {formatTime(timeLeft)}
-              {!timerActive && <span style={{ fontSize: '11px', marginLeft: '6px', color: '#888' }}>Click an answer to start</span>}
+              {!timerActive && <span style={{ fontSize: '11px', marginLeft: '6px', color: 'var(--text-muted)' }}>Click an answer to start</span>}
             </span>
           )}
         </div>
@@ -237,13 +237,13 @@ const QuizCard = () => {
 
         {quizData.caseId && typeof quizData.caseId === 'object' && (
           <div className="case-box" style={{
-            background: '#e3f2fd', border: '1px solid #bbdefb', borderRadius: '10px',
+            background: 'var(--color-info-bg)', border: '1px solid var(--border-light)', borderRadius: '10px',
             padding: '14px 16px', marginBottom: '16px',
           }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#0C4A4A', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#04484F', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
               📋 Cas clinique — {quizData.caseId.title || ''}
             </div>
-            <p style={{ margin: 0, fontSize: '14px', color: '#1a237e', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+            <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
               {quizData.caseId.description || ''}
             </p>
           </div>

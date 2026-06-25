@@ -299,7 +299,7 @@ const VoiceExamManagement = () => {
                   />
                   <button type="button" onClick={() => removeExistingImage(img)} style={{
                     position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%',
-                    background: 'var(--dc-highlight)', color: '#fff', border: 'none', cursor: 'pointer',
+                    background: 'var(--dc-highlight)', color: 'var(--dc-white)', border: 'none', cursor: 'pointer',
                     fontSize: 12, lineHeight: '20px', padding: 0, textAlign: 'center',
                   }}>×</button>
                 </div>
@@ -313,7 +313,7 @@ const VoiceExamManagement = () => {
                   <img src={p} alt="" loading="lazy" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--dc-border)' }} />
                   <button type="button" onClick={() => removeNewImage(i)} style={{
                     position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%',
-                    background: 'var(--dc-highlight)', color: '#fff', border: 'none', cursor: 'pointer',
+                    background: 'var(--dc-highlight)', color: 'var(--dc-white)', border: 'none', cursor: 'pointer',
                     fontSize: 12, lineHeight: '20px', padding: 0, textAlign: 'center',
                   }}>×</button>
                 </div>
@@ -326,11 +326,11 @@ const VoiceExamManagement = () => {
         <h4 style={{ margin: '16px 0 8px' }}>Questions</h4>
 
         {form.questions.map((q, qIdx) => (
-          <div key={qIdx} style={{ border: '1px solid var(--dc-border)', borderRadius: 8, padding: 14, marginBottom: 12, background: '#fafafa' }}>
+          <div key={qIdx} style={{ border: '1px solid var(--dc-border)', borderRadius: 8, padding: 14, marginBottom: 12, background: 'var(--dc-cream)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <strong style={{ fontSize: 14 }}>Question {qIdx + 1}</strong>
               {form.questions.length > 1 && (
-                <button type="button" onClick={() => removeQuestion(qIdx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c' }}>
+                <button type="button" onClick={() => removeQuestion(qIdx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--dc-highlight)' }}>
                   <FaTimes />
                 </button>
               )}
@@ -369,7 +369,7 @@ const VoiceExamManagement = () => {
                     style={{ ...inp, flex: 1 }}
                   />
                   {q.criteria.length > 1 && (
-                    <button type="button" onClick={() => removeCriterion(qIdx, cIdx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', padding: '6px 4px' }}>
+                    <button type="button" onClick={() => removeCriterion(qIdx, cIdx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--dc-highlight)', padding: '6px 4px' }}>
                       <FaTimes />
                     </button>
                   )}

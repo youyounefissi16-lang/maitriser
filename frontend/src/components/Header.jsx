@@ -13,8 +13,7 @@ export default function Header({ toggleDarkMode, isDarkMode }) {
   return (
     <nav className="header-nav" role="navigation" aria-label="Navigation principale">
       <NavLink to="/" onClick={() => play('navigate')} className="header-logo" aria-label="Accueil MAITRISEZ">
-        <span className="header-logo-icon">M</span>
-        <span className="header-logo-text">MAITRISEZ</span>
+        <img src="/logo.png" alt="MAITRISEZ" className="header-logo-img" />
       </NavLink>
 
       <div className="hamburger" onClick={() => setIsMenuOpen(!isMenuOpen)} style={{ display: 'none', cursor: 'pointer', fontSize: '20px' }}>

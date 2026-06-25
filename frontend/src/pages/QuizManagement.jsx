@@ -7,6 +7,7 @@ import { useSound } from '../context/SoundContext';
 import ConfirmModal from '../components/ConfirmModal';
 import Spinner from '../components/Spinner';
 import Pagination from '../components/Pagination';
+import { useTranslation } from '../context/LanguageContext';
 import { logger } from '../utils/logger';
 import '../styles/QuizManagement.css';
 
@@ -41,6 +42,7 @@ const OptionItem = ({ i, opt, onUpdate }) => {
 const QuizManagement = () => {
   const notify = useToast();
   const play = useSound();
+  const { t } = useTranslation();
   const [modules, setModules]               = useState([]);
   const [filteredModules, setFilteredModules] = useState([]);
   const [quizzes, setQuizzes]               = useState([]);
@@ -368,20 +370,20 @@ const QuizManagement = () => {
         <span className="qm-user">Admin</span>
       </div>
 
-      <div className="qm-breadcrumb">Dashboard / Manage MCQs / Add New Question</div>
+      <div className="qm-breadcrumb">{t('admin.dashboard.title')} / {t('admin.quiz.title')} / {t('admin.quiz.addNew')}</div>
 
       <div className="qm-csv-import">
-        <strong>Import CSV</strong>
+        <strong>{t('admin.quiz.importCSV')}</strong>
         <input type="file" accept=".csv" onChange={handleCSVImport} disabled={csvImporting} />
-        {csvImporting && <span className="qm-spinner">Importing...</span>}
+        {csvImporting && <span className="qm-spinner">{t('admin.quiz.csvImporting')}</span>}
       </div>
 
       <div style={{ marginBottom: '20px' }}>
-        <button type="button" className="btn-publish" style={{ padding: '10px 22px', border: 'none', borderRadius: 'var(--dc-radius-sm)', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }} onClick={() => setShowCaseModal(true)}>➕ Nouveau Cas</button>
+        <button type="button" className="btn-publish" style={{ padding: '10px 22px', border: 'none', borderRadius: 'var(--dc-radius-sm)', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }} onClick={() => setShowCaseModal(true)}>➕ {t('admin.quiz.newCase')}</button>
       </div>
 
       <div className="qm-form" key={formKey}>
-        <h2 className="qm-form-title">{editId ? 'Edit Question' : 'Add New Question (MCQ)'}</h2>
+        <h2 className="qm-form-title">{editId ? t('admin.quiz.edit') : t('admin.quiz.addNew')}</h2>
 
         <div className="qm-filters">
           <select value={form.selectedYear} onChange={(e) => setField('selectedYear', e.target.value)}>
@@ -393,19 +395,19 @@ const QuizManagement = () => {
             {filteredModules.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
           </select>
           <select className="qm-input-sm" value={form.course} onChange={(e) => setField('course', e.target.value)} disabled={!form.moduleId || moduleCourses.length === 0}>
-            <option value="">Course</option>
+            <option value="">{t('admin.quiz.course')}</option>
             {moduleCourses.map((c, i) => <option key={i} value={c}>{c}</option>)}
           </select>
-          <input className="qm-input-sm" type="text" value={form.quizId} onChange={(e) => setField('quizId', e.target.value)} placeholder="Quiz ID" />
+          <input className="qm-input-sm" type="text" value={form.quizId} onChange={(e) => setField('quizId', e.target.value)} placeholder={t('admin.quiz.quizId')} />
         </div>
 
         <div className="qm-section">
-          <label className="qm-label">Question Text</label>
+          <label className="qm-label">{t('admin.quiz.questionText')}</label>
           <textarea className="qm-textarea" value={form.questionText} onChange={(e) => setField('questionText', e.target.value)} placeholder="Write the question here..." rows={4} />
         </div>
 
         <div className="qm-section">
-          <label className="qm-label">Options</label>
+          <label className="qm-label">{t('admin.quiz.options')}</label>
           <div className="qm-options-header">
             <span className="col-letter">Letter</span>
             <span className="col-text">Option</span>
@@ -429,7 +431,7 @@ const QuizManagement = () => {
         </div>
 
         <div className="qm-section">
-          <label className="qm-label">Correct Answers</label>
+          <label className="qm-label">{t('admin.quiz.correctAnswers')}</label>
           <div className="qm-answer-letters">
             {LETTERS.slice(0, form.options.length).map((l, i) => (
               <button key={i} type="button" className={`letter-btn ${form.correctIndices.includes(i) ? 'selected' : ''}`}
@@ -439,29 +441,29 @@ const QuizManagement = () => {
         </div>
 
         <div className="qm-section">
-          <label className="qm-label">Explanation</label>
+          <label className="qm-label">{t('admin.quiz.explanation')}</label>
           <textarea className="qm-textarea" value={form.explanation} onChange={(e) => setField('explanation', e.target.value)} placeholder="Write explanation here..." rows={3} />
         </div>
 
 
 
         <div className="qm-actions">
-          <button type="button" className="btn-draft" onClick={() => handleSubmit(false)} disabled={submitting}><FaSave /> Save Draft</button>
-          <button type="button" className="btn-publish" onClick={() => handleSubmit(true)} disabled={submitting}><FaPaperPlane /> Publish</button>
-          {editId && <button type="button" className="btn-cancel" onClick={resetForm}>Cancel</button>}
+          <button type="button" className="btn-draft" onClick={() => handleSubmit(false)} disabled={submitting}><FaSave /> {t('admin.quiz.saveDraft')}</button>
+          <button type="button" className="btn-publish" onClick={() => handleSubmit(true)} disabled={submitting}><FaPaperPlane /> {t('admin.quiz.publish')}</button>
+          {editId && <button type="button" className="btn-cancel" onClick={resetForm}>{t('admin.quiz.cancel')}</button>}
         </div>
       </div>
 
       <div className="qm-list-filters">
         <select value={filterYear} onChange={(e) => { setFilterYear(e.target.value); setFilterModule(''); }}>
-          <option value="">All Years</option>
+          <option value="">{t('admin.quiz.allYears')}</option>
           {YEARS.map((y) => <option key={y} value={y}>Year {y}</option>)}
         </select>
         <select value={filterModule} onChange={(e) => setFilterModule(e.target.value)}>
-          <option value="">All Modules</option>
+          <option value="">{t('admin.quiz.allModules')}</option>
           {filterModulesForBar.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
         </select>
-        <input type="text" placeholder="🔍 Search questions..." value={filterSearch}
+        <input type="text" placeholder={`🔍 ${t('admin.quiz.search')}`} value={filterSearch}
           onChange={(e) => setFilterSearch(e.target.value)}
           style={{ flex: 1, minWidth: '150px', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--dc-border)', fontSize: '13px' }} />
       </div>
@@ -473,22 +475,22 @@ const QuizManagement = () => {
         marginBottom: '12px', fontSize: '0.85rem', fontWeight: 600,
         flexWrap: 'wrap',
       }}>
-        <span>{selectedIds.size} quiz sélectionné{selectedIds.size > 1 ? 's' : ''}</span>
+        <span>{t('admin.quiz.selected', { count: selectedIds.size })}</span>
         <button type="button" className="btn-publish" style={{ padding: '6px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}
           onClick={() => handleBulkAction('publish')} disabled={bulkProcessing}>
-          ✓ Publier
+          {t('admin.quiz.bulkPublish')}
         </button>
-        <button type="button" style={{ padding: '6px 16px', border: '1px solid var(--dc-border)', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', background: '#fff' }}
+        <button type="button" style={{ padding: '6px 16px', border: '1px solid var(--dc-border)', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', background: 'var(--dc-white)' }}
           onClick={() => handleBulkAction('unpublish')} disabled={bulkProcessing}>
-          ◌ Dépublier
+          {t('admin.quiz.bulkUnpublish')}
         </button>
-        <button type="button" style={{ padding: '6px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', background: '#e74c3c', color: '#fff' }}
+        <button type="button" style={{ padding: '6px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', background: 'var(--dc-highlight)', color: 'var(--dc-white)' }}
           onClick={() => handleBulkAction('delete')} disabled={bulkProcessing}>
-          <FaTrash /> Supprimer
+          <FaTrash /> {t('admin.quiz.bulkDelete')}
         </button>
-        <button type="button" style={{ marginLeft: 'auto', padding: '4px 12px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', background: 'transparent', color: '#888' }}
+        <button type="button" style={{ marginLeft: 'auto', padding: '4px 12px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', background: 'transparent', color: 'var(--dc-text-muted)' }}
           onClick={() => setSelectedIds(new Set())}>
-          × Annuler
+          {t('admin.quiz.bulkCancel')}
         </button>
       </div>
 
@@ -501,14 +503,14 @@ const QuizManagement = () => {
                 <input type="checkbox" checked={quizzes.length > 0 && selectedIds.size === quizzes.length}
                   onChange={toggleSelectAll} style={{ cursor: 'pointer', width: '16px', height: '16px' }} />
               </th>
-              {['ID', 'Year', 'Module', 'Course', 'Published', 'Case', 'Question', 'Options', 'Correct', 'Actions'].map((h) => (<th key={h}>{h}</th>))}
+              {[t('admin.quiz.quizId'), t('admin.quiz.year'), t('admin.quiz.module'), t('admin.quiz.course'), t('admin.quiz.published'), 'Case', t('admin.quiz.questionText'), t('admin.quiz.options'), t('admin.quiz.correctAnswers'), 'Actions'].map((h) => (<th key={h}>{h}</th>))}
             </tr>
           </thead>
           <tbody>
             {quizzes.length === 0
-                ? <tr><td colSpan="11" className="qm-empty">No quizzes</td></tr>
+                ? <tr><td colSpan="11" className="qm-empty">{t('admin.quiz.noQuizzes')}</td></tr>
                 : quizzes.map((quiz) => (
-                  <tr key={quiz._id} style={{ background: selectedIds.has(quiz._id) ? '#f0fdf4' : undefined }}>
+                  <tr key={quiz._id} style={{ background: selectedIds.has(quiz._id) ? 'var(--dc-cream-light)' : undefined }}>
                     <td>
                       <input type="checkbox" checked={selectedIds.has(quiz._id)}
                         onChange={() => toggleSelect(quiz._id)} style={{ cursor: 'pointer', width: '16px', height: '16px' }} />
@@ -518,9 +520,9 @@ const QuizManagement = () => {
                     <td>{quiz.moduleId?.name || '—'}</td>
                     <td>{quiz.course || '—'}</td>
                     <td>{quiz.published
-                      ? <span style={{ color: '#27ae60', fontWeight: 700 }}>✓ Publié</span>
-                      : <span style={{ color: '#999' }}>Brouillon</span>}</td>
-                    <td>{quiz.caseId ? <span style={{ background: '#e3f2fd', color: '#0C4A4A', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>📋 {quiz.caseId?.title || 'Case'}</span> : '—'}</td>
+                      ? <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>{t('admin.quiz.published')}</span>
+                      : <span style={{ color: 'var(--dc-text-muted)' }}>{t('admin.quiz.draft')}</span>}</td>
+                    <td>{quiz.caseId ? <span style={{ background: 'var(--dc-cream-light)', color: 'var(--dc-accent)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>📋 {quiz.caseId?.title || 'Case'}</span> : '—'}</td>
                     <td className="qm-cell-text">{quiz.question?.questionText}</td>
                     <td>{quiz.question?.options?.join(', ')}</td>
                     <td>{quiz.question?.correctAnswers?.join(', ')}</td>
@@ -547,15 +549,15 @@ const QuizManagement = () => {
             padding: '28px', width: '90%', maxWidth: '680px', marginTop: '20px',
             boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
           }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 20px', fontSize: '1.2rem', color: 'var(--dc-dark)' }}>📋 Nouveau Cas Clinique</h2>
+            <h2 style={{ margin: '0 0 20px', fontSize: '1.2rem', color: 'var(--dc-dark)' }}>📋 {t('admin.quiz.newCase')}</h2>
 
             <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
               <select value={caseForm.year} onChange={(e) => { setCaseField('year', e.target.value); setCaseField('moduleId', ''); }} style={{ flex: 1, padding: '10px 14px', border: '1px solid var(--dc-border)', borderRadius: '6px', fontSize: '0.85rem' }}>
-                <option value="">Choose Year</option>
+            <option value="">{t('admin.quiz.year')}</option>
                 {YEARS.map((y) => <option key={y} value={y}>Year {y}</option>)}
               </select>
               <select value={caseForm.moduleId} onChange={(e) => setCaseField('moduleId', e.target.value)} disabled={!caseForm.year} style={{ flex: 1, padding: '10px 14px', border: '1px solid var(--dc-border)', borderRadius: '6px', fontSize: '0.85rem' }}>
-                <option value="">Choose Module</option>
+            <option value="">{t('admin.quiz.module')}</option>
                 {caseFilteredModules.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
               </select>
             </div>
@@ -579,7 +581,7 @@ const QuizManagement = () => {
               {caseForm.quizzes.map((quiz, qIdx) => (
                 <div key={qIdx} style={{
                   border: '1px solid var(--dc-border)', borderRadius: '8px', padding: '16px', marginBottom: '12px',
-                  background: qIdx % 2 === 0 ? '#fafafa' : '#fff',
+                  background: qIdx % 2 === 0 ? 'var(--dc-cream)' : 'var(--dc-white)',
                 }}>
                   <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--dc-accent)', marginBottom: '10px' }}>Quiz {qIdx + 1}</div>
 
@@ -610,7 +612,7 @@ const QuizManagement = () => {
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid var(--dc-border)', paddingTop: '16px' }}>
               <button type="button" onClick={() => setShowCaseModal(false)} disabled={creatingCase} style={{ padding: '10px 22px', border: '1px solid var(--dc-border)', borderRadius: '6px', background: 'var(--dc-cream-light, #f5f3f7)', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
-              <button type="button" onClick={handleCreateCase} disabled={creatingCase} style={{ padding: '10px 22px', border: 'none', borderRadius: '6px', background: 'linear-gradient(135deg, var(--dc-dark), var(--dc-accent))', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>{creatingCase ? 'Creating...' : 'Create Case'}</button>
+              <button type="button" onClick={handleCreateCase} disabled={creatingCase} style={{ padding: '10px 22px', border: 'none', borderRadius: '6px', background: 'linear-gradient(135deg, var(--dc-dark), var(--dc-accent))', color: 'var(--dc-white)', cursor: 'pointer', fontWeight: 700 }}>{creatingCase ? 'Creating...' : 'Create Case'}</button>
             </div>
           </div>
         </div>
@@ -618,22 +620,22 @@ const QuizManagement = () => {
 
       <ConfirmModal
         open={!!deleteTarget}
-        title="Delete Question"
-        message={`Delete quiz "${deleteTarget?.quizId || ''}"?`}
+        title={t('admin.quiz.deleteConfirm')}
+        message={t('admin.quiz.deleteConfirmMsg', { id: deleteTarget?.quizId || '' })}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
-        confirmText="Delete"
+        confirmText={t('admin.quiz.delete')}
         confirmDisabled={submitting}
       />
 
       <ConfirmModal
         open={!!bulkDeleteTarget}
-        title="Suppression groupée"
-        message={`Supprimer définitivement ${bulkDeleteTarget?.length || 0} quiz sélectionnés ?`}
+        title={t('admin.quiz.deleteConfirm')}
+        message={t('admin.quiz.deleteConfirmMsg', { id: `${bulkDeleteTarget?.length || 0} selected` })}
         onConfirm={confirmBulkDelete}
         onCancel={() => setBulkDeleteTarget(null)}
-        confirmText="Supprimer"
-        cancelText="Annuler"
+        confirmText={t('admin.quiz.delete')}
+        cancelText={t('admin.quiz.cancel')}
         confirmDisabled={submitting}
       />
     </div>

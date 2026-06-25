@@ -106,7 +106,7 @@ const BooksPage = () => {
         <h2>📚 Bibliothèque</h2>
 
         {modulesError ? (
-          <div className="empty-state" style={{ color: '#e74c3c' }}>
+          <div className="empty-state" style={{ color: 'var(--color-danger)' }}>
             <p>Erreur lors du chargement : {modulesError}</p>
             <button type="button" className="btn-primary" onClick={fetchModules} style={{ marginTop: '12px' }}>Réessayer</button>
           </div>
@@ -128,7 +128,7 @@ const BooksPage = () => {
         )}
 
         {booksError ? (
-          <div className="empty-state" style={{ color: '#e74c3c' }}>
+          <div className="empty-state" style={{ color: 'var(--color-danger)' }}>
             <p>Erreur lors du chargement des livres : {booksError}</p>
             <button type="button" className="btn-primary" onClick={fetchBooks} style={{ marginTop: '12px' }}>Réessayer</button>
           </div>
@@ -163,16 +163,16 @@ const BooksPage = () => {
           background: 'rgba(0,0,0,0.7)', zIndex: 1000,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         }}>
-          <div style={{ background: '#fff', width: '90%', height: '90%', borderRadius: '14px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--card-bg)', width: '90%', height: '90%', borderRadius: '14px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '14px 24px', borderBottom: '1px solid #eee', background: '#f8f8f8',
+              padding: '14px 24px', borderBottom: '1px solid var(--border-light)', background: 'var(--color-bg)',
             }}>
-              <span style={{ fontWeight: 'bold', color: '#111' }}>📖 {openBook.title}</span>
+              <span style={{ fontWeight: 'bold', color: 'var(--text-dark)' }}>📖 {openBook.title}</span>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button type="button" className="btn-dark" style={{ padding: '6px 16px', fontSize: '12px' }}
                   onClick={() => handleDownload(openBook)} disabled={downloading === openBook._id}>{downloading === openBook._id ? 'Téléchargement...' : '⬇ Télécharger'}</button>
-                <button type="button" className="btn-primary" style={{ padding: '6px 16px', fontSize: '12px', background: '#e74c3c' }}
+                <button type="button" className="btn-primary" style={{ padding: '6px 16px', fontSize: '12px', background: 'var(--color-danger)' }}
                   onClick={() => setOpenBook(null)}>✕ Fermer</button>
               </div>
             </div>
@@ -205,7 +205,7 @@ const BookPreview = ({ bookId, title }) => {
     })();
     return () => { cancelled = true; if (src) URL.revokeObjectURL(src); };
   }, [bookId]);
-  if (error) return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e74c3c' }}>Échec du chargement du fichier</div>;
+  if (error) return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-danger)' }}>Échec du chargement du fichier</div>;
   if (!src) return <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Chargement…</div>;
   return <iframe src={src} title={title} style={{ flex: 1, border: 'none', width: '100%' }} />;
 };

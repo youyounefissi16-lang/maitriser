@@ -23,12 +23,12 @@
 .skeleton-quiz-item { pointer-events: none; }
 
 :root {
-  --teal-dark: #063038;
-  --teal-deeper: #04252b;
-  --teal-accent: #08424C;
-  --teal-light: #b2dfdb;
-  --orange-accent: #EAB308;
-  --orange-hover: #CA8A04;
+  --teal-dark: #04484F;
+  --teal-deeper: #03383E;
+  --teal-accent: #C1FF30;
+  --teal-light: #E8F1F0;
+  --orange-accent: #FF5205;
+  --orange-hover: #E64A04;
   --card-bg: #ffffff;
   --card-radius: 20px;
   --text-dark: #0F172A;
@@ -39,10 +39,14 @@
   --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
   --border-light: #E2E8F0;
   --color-bg: #F8FAFC;
-  --color-success: #10B981;
+  --color-success: #C1FF30;
   --color-danger: #EF4444;
-  --color-warning: #D97706;
+  --color-warning: #FF5205;
   --color-info: #2563eb;
+  --color-info-bg: #EFF6FF;
+  --color-success-bg: #F0FDF4;
+  --color-warning-bg: #FFFBEB;
+  --color-danger-bg: #FEF2F2;
   --radius-sm: 6px;
   --radius-md: 12px;
   --radius-lg: 20px;
@@ -663,11 +667,11 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── Dark Mode ──────────────────── */
 [data-theme="dark"] {
-  --teal-dark: #0a5060;
-  --teal-deeper: #063640;
-  --teal-accent: #3fb8b0;
-  --teal-light: #08424C;
-  --orange-accent: #F59E0B;
+  --teal-dark: #065A64;
+  --teal-deeper: #04484F;
+  --teal-accent: #D4FF66;
+  --teal-light: #04484F;
+  --orange-accent: #FF6B2A;
   --card-bg: #132226;
   --text-dark: #f1f5f9;
   --text-muted: #94a3b8;
@@ -678,10 +682,14 @@ h1, h2, h3, h4, h5, h6 {
   --header-bg: #0B1315;
   --text-color: #f1f5f9;
   --color-bg: #0B1315;
-  --color-success: #34d399;
+  --color-success: #D4FF66;
   --color-danger: #f87171;
-  --color-warning: #F59E0B;
+  --color-warning: #FF6B2A;
   --color-info: #60a5fa;
+  --color-info-bg: #1E293B;
+  --color-success-bg: #052E16;
+  --color-warning-bg: #2D1B00;
+  --color-danger-bg: #3B1111;
 }
 
 [data-theme="dark"] body {
@@ -932,6 +940,10 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 18px;
   color: var(--text-dark);
 }
+.header-logo-img {
+  height: 36px;
+  width: auto;
+}
 .header-links {
   display: flex;
   align-items: center;
@@ -1168,6 +1180,55 @@ h1, h2, h3, h4, h5, h6 {
 .action-desc {
   font-size: var(--text-xs);
   color: var(--text-muted);
+}
+
+/* ── Quick Guide ────────────────────────────────────────── */
+.dashboard-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 32px;
+  padding: 20px 24px;
+  background: var(--card-bg);
+  border: 1px solid rgba(8, 66, 76, 0.15);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.guide-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+}
+.guide-item svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.guide-text {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.guide-dismiss {
+  align-self: flex-end;
+  margin-top: 8px;
+  padding: 6px 18px;
+  border: 1px solid var(--teal-accent);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--teal-accent);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.guide-dismiss:hover {
+  background: var(--teal-accent);
+  color: #fff;
+}
+[data-theme="dark"] .dashboard-guide {
+  background: var(--card-bg);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 /* ── Recent Activity ────────────────────────────────────── */

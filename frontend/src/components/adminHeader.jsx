@@ -22,7 +22,7 @@ const AdminHeader = ({ toggleSidebar, sidebarOpen }) => {
         <button className="hamburger-btn" onClick={toggleSidebar} aria-label="Toggle sidebar">
           <FaBars />
         </button>
-        <div className="logo">MAITRISEZ Admin</div>
+        <div className="logo"><img src="/logo.png" alt="MAITRISEZ" style={{ height: 24, marginRight: 8, verticalAlign: 'middle' }} />Admin</div>
       </div>
       <nav className="nav-links">
         <NavLink to="/dashboard" className="profile-link" onClick={() => play('navigate')}>User Panel</NavLink>

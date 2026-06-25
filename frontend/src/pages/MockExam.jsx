@@ -233,24 +233,24 @@ const MockExam = () => {
       <div className="page-teal">
         <div className="card-teal" style={{ maxWidth: '800px' }}>
           <h2 style={{ marginBottom: '8px' }}>Review Your Answers</h2>
-          <p style={{ color: '#555', fontSize: '14px', marginBottom: '16px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '16px' }}>
             {answeredCount} of {totalQuestions} answered{unanswered.length > 0 ? ` (${unanswered.length} skipped)` : ''}
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
             {questions.map((q, i) => {
               const isAnswered = answers[q._id] && answers[q._id].length > 0;
               const isFlagged = flagged.includes(q._id);
-              let bg = '#f0f0f0';
+              let bg = 'var(--color-bg)';
               let label = `${i + 1}`;
-              if (isAnswered) { bg = '#d4edda'; label = `✓ ${i + 1}`; }
-              if (isFlagged) { bg = '#fff3cd'; label = `⚑ ${i + 1}`; }
-              if (isAnswered && isFlagged) { bg = '#cce5ff'; label = `✓⚑ ${i + 1}`; }
+              if (isAnswered) { bg = 'var(--color-success-bg)'; label = `✓ ${i + 1}`; }
+              if (isFlagged) { bg = 'var(--color-warning-bg)'; label = `⚑ ${i + 1}`; }
+              if (isAnswered && isFlagged) { bg = 'var(--color-info-bg)'; label = `✓⚑ ${i + 1}`; }
               return (
                 <button key={q._id} onClick={() => { setCurrentIndex(i); setReviewing(false); }}
                   style={{
-                    width: '48px', height: '48px', borderRadius: '8px', border: '1px solid #ddd',
+                    width: '48px', height: '48px', borderRadius: '8px', border: '1px solid var(--border-light)',
                     background: bg, cursor: 'pointer', fontWeight: 700, fontSize: '13px',
-                    color: isFlagged ? '#856404' : isAnswered ? '#155724' : '#333',
+                    color: isFlagged ? 'var(--color-warning)' : isAnswered ? 'var(--color-success)' : 'var(--text-dark)',
                   }}>
                   {label}
                 </button>
@@ -278,11 +278,11 @@ const MockExam = () => {
       <div className="quiz-container-teal" style={{ maxWidth: '800px' }}>
         <div style={{ marginBottom: '24px' }}>
           <div className="mock-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontWeight: 700, fontSize: '14px', color: '#555' }}>
+            <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-muted)' }}>
               {t('mock.question')} {currentIndex + 1} / {totalQuestions}
             </span>
             <div className="mock-header-right" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <span style={{ fontSize: '13px', color: '#888' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                 {answeredCount} / {totalQuestions} {t('mock.answered')}
               </span>
               <span className="timer-badge timer-running" style={{ color: timeLeft <= 60 ? 'var(--color-danger)' : 'var(--text-dark)', fontSize: '16px' }}>
@@ -297,14 +297,14 @@ const MockExam = () => {
             {questions.map((q, i) => {
               const isAnswered = answers[q._id] && answers[q._id].length > 0;
               const isFlagged = flagged.includes(q._id);
-              let dotColor = '#ddd';
-              if (isFlagged) dotColor = '#ffc107';
-              else if (isAnswered) dotColor = '#27ae60';
+              let dotColor = 'var(--border-light)';
+              if (isFlagged) dotColor = 'var(--color-warning)';
+              else if (isAnswered) dotColor = 'var(--color-success)';
               return (
                 <button key={q._id} onClick={() => setCurrentIndex(i)}
                   style={{
                     width: i === currentIndex ? '20px' : '16px', height: '6px', borderRadius: '3px',
-                    border: 'none', background: i === currentIndex ? '#14a3a8' : dotColor,
+                    border: 'none', background: i === currentIndex ? '#04484F' : dotColor,
                     cursor: 'pointer', transition: 'all 0.2s', padding: 0,
                     opacity: i === currentIndex ? 1 : 0.6,
                   }}
@@ -316,18 +316,18 @@ const MockExam = () => {
 
         {current._blockType === 'case' && (
           <div className="case-box" style={{
-            background: '#e3f2fd', border: '1px solid #bbdefb', borderRadius: '10px',
+            background: 'var(--color-info-bg)', border: '1px solid var(--border-light)', borderRadius: '10px',
             padding: '16px', marginBottom: '16px',
           }}>
-            <p style={{ margin: 0, fontWeight: 600, fontSize: '15px', color: '#0C4A4A', marginBottom: '4px' }}>📋 {t('mock.case', { title: current._caseTitle })}</p>
+            <p style={{ margin: 0, fontWeight: 600, fontSize: '15px', color: '#04484F', marginBottom: '4px' }}>📋 {t('mock.case', { title: current._caseTitle })}</p>
             <p style={{ margin: 0, fontSize: '13px', color: '#1a237e', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{current._caseDescription}</p>
           </div>
         )}
-        <h3 style={{ fontSize: '18px', marginBottom: '8px', color: '#111' }}>
+        <h3 style={{ fontSize: '18px', marginBottom: '8px', color: 'var(--text-dark)' }}>
           {current.question?.questionText}
         </h3>
         {current.question?.options?.length > 2 && (
-          <p style={{ fontSize: '12px', color: '#888', marginBottom: '12px' }}>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
             {t('mock.selectAll')}
           </p>
         )}
@@ -339,8 +339,8 @@ const MockExam = () => {
               <label key={i} className="option-label"
                 onClick={() => toggleOption(current._id, opt)}
                 style={{
-                  background: selected ? '#e3f2fd' : '#f9f9f9',
-                  borderColor: selected ? '#14a3a8' : '#e8e8e8',
+                  background: selected ? 'var(--color-info-bg)' : 'var(--color-bg)',
+                  borderColor: selected ? '#04484F' : 'var(--border-light)',
                   cursor: 'pointer',
                 }}>
                 <input type="checkbox" checked={selected} readOnly />
@@ -359,9 +359,9 @@ const MockExam = () => {
             )}
             <button className="btn-flag" onClick={() => toggleFlag(current._id)}
               style={{
-                padding: '8px 16px', borderRadius: '8px', border: flagged.includes(current._id) ? '2px solid #ffc107' : '1px solid #ddd',
-                background: flagged.includes(current._id) ? '#fff8e1' : '#f9f9f9',
-                cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: flagged.includes(current._id) ? '#856404' : '#888',
+                padding: '8px 16px', borderRadius: '8px', border: flagged.includes(current._id) ? '2px solid #ffc107' : '1px solid var(--border-light)',
+                background: flagged.includes(current._id) ? 'var(--color-warning-bg)' : 'var(--color-bg)',
+                cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: flagged.includes(current._id) ? '#856404' : 'var(--text-muted)',
               }}>
               ⚑ {flagged.includes(current._id) ? 'Flagged' : 'Flag'}
             </button>
@@ -369,8 +369,8 @@ const MockExam = () => {
           <div style={{ display: 'flex', gap: '10px' }}>
             <button className="btn-review" onClick={() => setReviewing(true)}
               style={{
-                padding: '8px 16px', borderRadius: '8px', border: '1px solid #14a3a8',
-                background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: '#14a3a8',
+                padding: '8px 16px', borderRadius: '8px',                 border: '1px solid #04484F',
+                background: 'var(--card-bg)', cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: '#04484F',
               }}>
               Review all
             </button>

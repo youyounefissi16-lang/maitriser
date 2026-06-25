@@ -259,7 +259,7 @@ const QuizPage = () => {
               filteredQuizzes.map((quiz) => (
                 <div key={quiz._id} className="quiz-card-item">
                   <div className="qid">{quiz.quizId}</div>
-                  {quiz.caseId && <span style={{ display: 'inline-block', background: '#e3f2fd', color: '#0C4A4A', padding: '2px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px' }}>📋 {t('quiz.case')}</span>}
+                  {quiz.caseId && <span style={{ display: 'inline-block', background: '#e3f2fd', color: '#04484F', padding: '2px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px' }}>📋 {t('quiz.case')}</span>}
                   <h3>{quiz.question?.questionText?.substring(0, 80) || quiz.quizId}</h3>
                   <div className="qmeta">
                     Année {quiz.year} — {quiz.moduleId?.name || ''}{quiz.course ? ` — ${quiz.course}` : ''}

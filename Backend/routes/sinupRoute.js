@@ -2,6 +2,7 @@ import express from 'express';
 import { body } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import rateLimit from 'express-rate-limit';
 import User from '../models/userModel.js';
 import logger from '../utils/logger.js';
 import { broadcast } from '../ws.js';
@@ -46,8 +47,17 @@ router.post(
   }
 );
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: 'Too many login attempts. Please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.post(
   '/logging',
+  loginLimiter,
   [body('email').isEmail().normalizeEmail(), body('password').notEmpty()],
   validate,
   async (req, res) => {

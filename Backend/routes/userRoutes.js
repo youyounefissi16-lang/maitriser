@@ -6,12 +6,15 @@ import { getPagination, paginatedResponse } from '../utils/paginate.js';
 import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
+import { verifyToken, requireAdmin } from '../controllers/authController.js';
 
 const router = express.Router();
 
 // Create a user — admin generates a random initial password and returns it once
 router.post(
   '/add-user',
+  verifyToken,
+  requireAdmin,
   [
     body('userId').trim().notEmpty().isAlphanumeric().withMessage('userId must be alphanumeric'),
     body('name').trim().notEmpty(),
@@ -40,7 +43,7 @@ router.post(
 );
 
 // Get all users (password excluded)
-router.get('/users', catchAsync(async (req, res) => {
+router.get('/users', verifyToken, requireAdmin, catchAsync(async (req, res) => {
   const { skip, limit, page } = getPagination(req.query);
   const [users, total] = await Promise.all([
     User.find().select('-password').sort({ createdAt: -1 }).skip(skip).limit(limit),
@@ -50,7 +53,7 @@ router.get('/users', catchAsync(async (req, res) => {
 }));
 
 // Delete user by ID
-router.delete('/users/delete-user/:id', [param('id').isMongoId()], validate, catchAsync(async (req, res) => {
+router.delete('/users/delete-user/:id', verifyToken, requireAdmin, [param('id').isMongoId()], validate, catchAsync(async (req, res) => {
   const deletedUser = await User.findByIdAndDelete(req.params.id);
   if (!deletedUser) return res.status(404).json({ message: 'User not found' });
   res.status(200).json({ message: 'User deleted successfully' });
@@ -59,6 +62,8 @@ router.delete('/users/delete-user/:id', [param('id').isMongoId()], validate, cat
 // Edit user by ID
 router.put(
   '/users/edit-user/:id',
+  verifyToken,
+  requireAdmin,
   [
     param('id').isMongoId(),
     body('name').optional().trim().notEmpty(),
@@ -81,6 +86,7 @@ router.put(
 // Change password (authenticated user)
 router.put(
   '/change-password',
+  verifyToken,
   [
     body('currentPassword').notEmpty().withMessage('Current password is required'),
     body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters'),

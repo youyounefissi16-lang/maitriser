@@ -14,6 +14,7 @@ import { LanguageProvider, useTranslation } from './context/LanguageContext';
 import { SoundProvider } from './context/SoundContext';
 import { ThemeProvider } from './context/ThemeContext';
 import CookieConsent from './components/CookieConsent';
+import FeedbackButton from './components/FeedbackButton';
 import { logger } from './utils/logger';
 import useClerkToken from './hooks/useClerkToken';
 
@@ -50,6 +51,7 @@ const BookManagement = lazy(() => import('./pages/BookManagement'));
 const VoiceExamManagement = lazy(() => import('./pages/VoiceExamManagement'));
 const Reports = lazy(() => import('./pages/Reports'));
 const AdminSetup = lazy(() => import('./pages/AdminSetup'));
+const FeedbackManagement = lazy(() => import('./pages/FeedbackManagement'));
 
 const Fallback = () => {
   const { t } = useTranslation();
@@ -79,7 +81,7 @@ const UserLayout = ({ isDarkMode, toggleDarkMode }) => {
     <LanguageProvider>
     <SoundProvider>
     <ToastProvider>
-      <div style={isHome ? {} : { background: 'linear-gradient(135deg, var(--teal-dark, #0C4A4A) 0%, var(--teal-deeper, #0B3D3D) 100%)', minHeight: '100vh' }}>
+      <div style={isHome ? {} : { background: 'linear-gradient(135deg, var(--teal-dark, #04484F) 0%, var(--teal-deeper, #03383E) 100%)', minHeight: '100vh' }}>
         <CookieConsent />
         {isHome ? null : isSignedIn ? <Header2 toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} /> : <Header toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />}
 
@@ -113,6 +115,7 @@ const UserLayout = ({ isDarkMode, toggleDarkMode }) => {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <FeedbackButton />
       </Suspense>
 
       {!isAppPath && !isHome && <FooterPage />}
@@ -132,6 +135,7 @@ const AdminLayout = () => {
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
 
   return (
+    <LanguageProvider>
     <SoundProvider>
     <ToastProvider>
     <ThemeProvider>
@@ -147,6 +151,7 @@ const AdminLayout = () => {
     </ThemeProvider>
     </ToastProvider>
     </SoundProvider>
+    </LanguageProvider>
   );
 };
 
@@ -172,6 +177,7 @@ const AppContent = () => {
             <Route path="/admin/reports" element={<Reports />} />
             <Route path="/admin/book-management" element={<BookManagement />} />
             <Route path="/admin/voice-exam-management" element={<VoiceExamManagement />} />
+            <Route path="/admin/feedback" element={<FeedbackManagement />} />
             <Route path="/admin/profile" element={<AdminProfile />} />
             <Route path="*" element={<NotFound />} />
           </Route>

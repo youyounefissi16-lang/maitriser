@@ -8,12 +8,13 @@ const PrivacyPage = () => {
   return (
     <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="card-teal legal-page">
-        <h1 className="legal-heading">Politique de confidentialité</h1>
-        <p className="legal-updated">Dernière mise à jour : Juin 2026</p>
+        <h1 className="legal-heading">{t('privacy.title')}</h1>
+        <p className="legal-updated">{t('privacy.lastUpdated')}</p>
+        <p>{t('privacy.intro')}</p>
 
         <section className="legal-section">
-          <h2>1. Données collectées</h2>
-          <p>Nous collectons les données suivantes : nom, adresse email, identifiant utilisateur, résultats de quiz, et réponses aux examens oraux.</p>
+          <h2>1. {t('privacy.dataTitle')}</h2>
+          <p>{t('privacy.dataText')}</p>
         </section>
 
         <section className="legal-section">
@@ -37,9 +38,11 @@ const PrivacyPage = () => {
         </section>
 
         <section className="legal-section">
-          <h2>6. Cookies</h2>
-          <p>Nous utilisons des cookies essentiels au fonctionnement de la plateforme. Vous pouvez les gérer via les paramètres de votre navigateur.</p>
+          <h2>6. {t('privacy.cookiesTitle')}</h2>
+          <p>{t('privacy.cookiesText')}</p>
         </section>
+
+        <p>{t('privacy.contact')}</p>
       </div>
     </div>
   );

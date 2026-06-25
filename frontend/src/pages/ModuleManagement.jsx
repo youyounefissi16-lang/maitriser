@@ -151,7 +151,7 @@ const ModuleManagement = () => {
                 <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
                   <input type="text" value={newCourse} onChange={(e) => setNewCourse(e.target.value)} placeholder="Course name" style={{ width: 120 }} onKeyDown={(e) => { if (e.key === 'Escape') { setShowCourseInput(false); setNewCourse(''); } }} />
                   <button type="button" onClick={() => { const c = newCourse.trim(); if (!c) return; if (courses.includes(c)) notify('Course already added', 'warning'); else { setCourses((prev) => [...prev, c]); setNewCourse(''); setShowCourseInput(false); } }} style={{ padding: '4px 8px', fontSize: '0.8rem', cursor: 'pointer' }}>OK</button>
-                  <button type="button" onClick={() => { setShowCourseInput(false); setNewCourse(''); }} style={{ padding: '4px 8px', fontSize: '0.8rem', cursor: 'pointer', background: 'none', border: 'none', color: '#888' }}>X</button>
+                  <button type="button" onClick={() => { setShowCourseInput(false); setNewCourse(''); }} style={{ padding: '4px 8px', fontSize: '0.8rem', cursor: 'pointer', background: 'none', border: 'none', color: 'var(--dc-text-muted)' }}>X</button>
                 </span>
               ) : (
                 <button type="button" onClick={() => setShowCourseInput(true)} style={{ padding: '4px 10px', fontSize: '0.8rem', cursor: 'pointer', border: '1px dashed var(--dc-accent-light)', borderRadius: 14, background: 'transparent', color: 'var(--dc-accent)' }}>+ Add</button>

@@ -15,7 +15,7 @@ const ConfirmModal = ({ open, title, message, onConfirm, onCancel, confirmText =
         <p style={{ textAlign: 'center', color: 'var(--dc-text)', marginBottom: 20 }}>{message}</p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <button onClick={onCancel} style={{ ...modalBtn, border: '1px solid var(--dc-border)', background: 'var(--dc-cream)', color: 'var(--dc-text)' }}>{cancelText}</button>
-          <button onClick={onConfirm} disabled={confirmDisabled} style={{ ...modalBtn, border: 'none', background: 'var(--dc-highlight)', color: '#fff' }}>{confirmText}</button>
+          <button onClick={onConfirm} disabled={confirmDisabled} style={{ ...modalBtn, border: 'none', background: 'var(--dc-highlight)', color: 'var(--dc-white)' }}>{confirmText}</button>
         </div>
       </div>
     </div>

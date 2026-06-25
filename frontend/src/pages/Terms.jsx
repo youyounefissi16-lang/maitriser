@@ -8,12 +8,13 @@ const TermsPage = () => {
   return (
     <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="card-teal legal-page">
-        <h1 className="legal-heading">{t('terms.title', 'Conditions d\'utilisation')}</h1>
-        <p className="legal-updated">Dernière mise à jour : Juin 2026</p>
+        <h1 className="legal-heading">{t('terms.title')}</h1>
+        <p className="legal-updated">{t('terms.lastUpdated')}</p>
+        <p>{t('terms.intro')}</p>
 
         <section className="legal-section">
-          <h2>1. Acceptation des conditions</h2>
-          <p>En accédant et en utilisant MAITRISEZ, vous acceptez d'être lié par les présentes conditions d'utilisation.</p>
+          <h2>1. {t('terms.acceptance')}</h2>
+          <p>{t('terms.acceptance')}</p>
         </section>
 
         <section className="legal-section">
@@ -22,18 +23,18 @@ const TermsPage = () => {
         </section>
 
         <section className="legal-section">
-          <h2>3. Compte utilisateur</h2>
-          <p>Vous êtes responsable de la confidentialité de votre compte et de votre mot de passe. Vous devez nous informer immédiatement de toute utilisation non autorisée.</p>
+          <h2>3. {t('terms.accountTitle')}</h2>
+          <p>{t('terms.accountText')}</p>
         </section>
 
         <section className="legal-section">
-          <h2>4. Propriété intellectuelle</h2>
-          <p>Tout le contenu présent sur MAITRISEZ est protégé par les droits d'auteur. Vous ne pouvez pas reproduire, distribuer ou créer des œuvres dérivées sans autorisation.</p>
+          <h2>4. {t('terms.contentTitle')}</h2>
+          <p>{t('terms.contentText')}</p>
         </section>
 
         <section className="legal-section">
           <h2>5. Limitation de responsabilité</h2>
-          <p>MAITRISEZ ne peut être tenu responsable des dommages indirects résultant de l'utilisation de la plateforme.</p>
+          <p>{t('terms.limitation')}</p>
         </section>
 
         <section className="legal-section">

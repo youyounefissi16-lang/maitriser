@@ -47,7 +47,7 @@ const AddUserModal = ({ setShowModal, fetchUsers }) => {
         <div className="modal-content">
           <h3>User Created</h3>
           <p>Share this temporary password with the user. It will not be shown again.</p>
-          <code style={{ display: 'block', padding: '12px', background: '#f5f5f5', borderRadius: '4px', fontSize: '16px', margin: '12px 0' }}>
+          <code style={{ display: 'block', padding: '12px', background: 'var(--dc-cream)', borderRadius: '4px', fontSize: '16px', margin: '12px 0' }}>
             {tempPassword}
           </code>
           <button onClick={() => { fetchUsers(); setShowModal(false); }}>Close</button>

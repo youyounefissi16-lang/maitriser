@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { useTranslation } from '../context/LanguageContext';
@@ -52,6 +52,9 @@ const DashboardPage = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [recentResults, setRecentResults] = useState([]);
+  const [dismissedGuide, setDismissedGuide] = useState(() => {
+    try { return localStorage.getItem('guideDismissed') === 'true'; } catch { return false; }
+  });
   const fetchedRef = useRef(false);
 
   const greetingKey = useMemo(() => getGreetingKey(), []);
@@ -110,6 +113,11 @@ const DashboardPage = () => {
     })();
   }, []);
 
+  const handleDismissGuide = useCallback(() => {
+    setDismissedGuide(true);
+    try { localStorage.setItem('guideDismissed', 'true'); } catch { /* ignore */ }
+  }, []);
+
   if (loading) {
     return (
       <div className="page-teal">
@@ -134,6 +142,31 @@ const DashboardPage = () => {
             <p className="dashboard-subtitle">{t('dashboard.subtitle')}</p>
           </div>
         </div>
+
+        {!dismissedGuide && (
+          <>
+            <h2 className="dashboard-section-title">{t('guide.title')}</h2>
+            <div className="dashboard-guide">
+              <div className="guide-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span className="guide-text">{t('guide.quiz')}</span>
+              </div>
+              <div className="guide-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+                <span className="guide-text">{t('guide.mock')}</span>
+              </div>
+              <div className="guide-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+                <span className="guide-text">{t('guide.voice')}</span>
+              </div>
+              <div className="guide-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span className="guide-text">{t('guide.results')}</span>
+              </div>
+              <button className="guide-dismiss" onClick={handleDismissGuide}>{t('guide.dismiss')}</button>
+            </div>
+          </>
+        )}
 
         {isEmpty ? (
           <div className="dashboard-empty">

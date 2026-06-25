@@ -7,6 +7,7 @@ import { broadcast } from '../ws.js';
 import { catchAsync } from '../utils/asyncHandler.js';
 import { getPagination, paginatedResponse } from '../utils/paginate.js';
 import { validate } from '../middleware/validate.js';
+import { verifyToken } from '../controllers/authController.js';
 
 const router = express.Router();
 
@@ -51,7 +52,7 @@ router.post('/quizzes/:quizId/submit', [param('quizId').isMongoId()], validate, 
 }));
 
 // GET /api/results/:userId — fetch attempt history
-router.get('/results/:userId', catchAsync(async (req, res) => {
+router.get('/results/:userId', verifyToken, catchAsync(async (req, res) => {
   if (req.user.role !== 'admin' && req.user.userId !== req.params.userId)
     return res.status(403).json({ message: 'Access denied' });
   const { skip, limit, page } = getPagination(req.query);
