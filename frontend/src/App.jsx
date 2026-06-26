@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom';
 import { ClerkProvider, useAuth } from "@clerk/react";
 import Home from './pages/Home';
@@ -16,6 +16,9 @@ import { ThemeProvider } from './context/ThemeContext';
 import CookieConsent from './components/CookieConsent';
 import FeedbackButton from './components/FeedbackButton';
 import { logger } from './utils/logger';
+import { API_BASE_URL } from './config/api';
+import { setToken } from './utils/tokenStore';
+import axios from 'axios';
 import useClerkToken from './hooks/useClerkToken';
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -157,10 +160,44 @@ const AdminLayout = () => {
 
 const AppContent = () => {
   const ready = useClerkToken();
+  const { isSignedIn, getToken } = useAuth();
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/admin/setup';
   const [isDarkMode, setIsDarkMode] = useState(() => { try { return localStorage.getItem('darkMode') !== 'false'; } catch { return true; } });
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
+  const syncedRef = useRef(false);
+
+  useEffect(() => {
+    if (!ready || !isSignedIn || syncedRef.current) return;
+    let aborted = false;
+    (async () => {
+      try {
+        let token = await getToken();
+        if (!token) {
+          for (let i = 0; i < 30; i++) {
+            if (aborted) return;
+            await new Promise((r) => setTimeout(r, 300));
+            token = await getToken();
+            if (token) break;
+          }
+        }
+        if (aborted || !token) return;
+        setToken(token);
+        const res = await axios.post(
+          `${API_BASE_URL}/api/auth/clerk-sync`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (aborted) return;
+        try { localStorage.setItem('userId', res.data.userId); } catch {}
+        try { localStorage.setItem('userRole', res.data.role || 'user'); } catch {}
+        syncedRef.current = true;
+      } catch (err) {
+        logger.error({ err }, 'AppContent sync failed');
+      }
+    })();
+    return () => { aborted = true; };
+  }, [ready, isSignedIn, getToken]);
 
   if (!ready) return <LoadingPage />;
 

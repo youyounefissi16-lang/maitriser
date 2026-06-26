@@ -1,58 +1,33 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { SignIn, useAuth, useClerk } from "@clerk/react";
+import React, { useEffect, useState } from 'react';
+import { SignIn, useAuth } from "@clerk/react";
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { setToken } from '../utils/tokenStore';
-import { logger } from '../utils/logger';
-import { API_BASE_URL } from '../config/api';
 import { useTranslation } from '../context/LanguageContext';
 import '../styles/teal-theme.css';
 import '../styles/pagesStyle/login.css';
 
 const Login = () => {
-  const { isSignedIn, isLoaded, getToken } = useAuth();
-  const { signOut } = useClerk();
+  const { isSignedIn, isLoaded } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [status, setStatus] = useState('idle');
-  const synced = useRef(false);
+  const [waiting, setWaiting] = useState(false);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || synced.current || status !== 'idle') return;
-    let aborted = false;
-    try { localStorage.removeItem('userId'); } catch { /* ignore */ }
-    setStatus('syncing');
-    const sync = async () => {
-      try {
-        let token = await getToken();
-        if (!token) {
-          for (let i = 0; i < 10; i++) {
-            if (aborted) return;
-            await new Promise((r) => setTimeout(r, 300));
-            token = await getToken();
-            if (token) break;
-          }
+    if (!isLoaded || !isSignedIn) return;
+    const userId = (() => { try { return localStorage.getItem('userId'); } catch { return null; } })();
+    if (userId) {
+      navigate('/dashboard', { replace: true });
+    } else {
+      setWaiting(true);
+      const interval = setInterval(() => {
+        const uid = (() => { try { return localStorage.getItem('userId'); } catch { return null; } })();
+        if (uid) {
+          clearInterval(interval);
+          navigate('/dashboard', { replace: true });
         }
-        if (aborted) return;
-        if (!token) throw new Error('No token');
-        setToken(token);
-        const res = await axios.post(
-          `${API_BASE_URL}/api/auth/clerk-sync`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (aborted) return;
-        try { localStorage.setItem('userId', res.data.userId); } catch { /* ignore */ }
-        synced.current = true;
-        navigate('/', { replace: true });
-      } catch (err) {
-        logger.error({ err }, 'Login sync failed');
-        if (!aborted) setStatus('sync_failed');
-      }
-    };
-    sync();
-    return () => { aborted = true; };
-  }, [isLoaded, isSignedIn, status, getToken, navigate]);
+      }, 500);
+      return () => clearInterval(interval);
+    }
+  }, [isLoaded, isSignedIn, navigate]);
 
   if (!isLoaded) return (
     <div className="page-teal login-page">
@@ -60,31 +35,25 @@ const Login = () => {
     </div>
   );
 
-  if (isSignedIn) {
+  if (isSignedIn && waiting) {
     return (
       <div className="page-teal login-page">
         <div className="login-container login-sync-container">
           <div className="login-sync-inner">
-            {status === 'syncing' && <p>{t('login.syncing')}</p>}
-            {status === 'sync_failed' && (
-              <>
-                <p className="login-sync-error">{t('login.syncFailed')}</p>
-                <button className="login-btn" onClick={() => setStatus('idle')}>{t('login.retry')}</button>
-                <button className="login-btn login-btn-secondary" onClick={() => signOut()}>{t('login.signOut')}</button>
-              </>
-            )}
-            {status === 'idle' && <p>{t('login.checking')}</p>}
+            <p>{t('login.syncing')}</p>
           </div>
         </div>
       </div>
     );
   }
 
+  if (isSignedIn) return null;
+
   return (
     <div className="page-teal login-page">
       <div className="login-container">
         <div className="login-form" role="main" aria-label="Formulaire de connexion">
-          <SignIn signUpUrl="/signup" />
+          <SignIn signUpUrl="/signup" afterSignInUrl="/login" />
           <p style={{ textAlign: 'center', marginTop: 16 }}>
             <a href="/forgot-password" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Mot de passe oublié ?</a>
           </p>
