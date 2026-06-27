@@ -10,7 +10,7 @@ const Signup = () => {
     <div className="page-teal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
       <div className="login-container">
         <div className="login-form">
-          <SignUp fallbackRedirectUrl="/" signInUrl="/login"
+          <SignUp fallbackRedirectUrl="/dashboard" afterSignUpUrl="/discipline-picker" signInUrl="/login"
             appearance={{
               elements: {
                 card: { boxShadow: 'none', width: '100%' },

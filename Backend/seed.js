@@ -2,41 +2,52 @@ import mongoose from 'mongoose';
 import Module from './models/moduleModel.js';
 import Quiz from './models/quizModel.js';
 import VoiceExam from './models/voiceExamModel.js';
+import Counter from './models/counterModel.js';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/QuizApp';
 
-const modules = [
-  // Year 1
-  { name: 'Anatomie', year: 1, courses: ['Anatomie générale', 'Anatomie des membres', 'Anatomie du thorax'] },
-  { name: 'Biochimie', year: 1, courses: ['Biochimie structurale', 'Enzymologie', 'Métabolismes'] },
-  { name: 'Biophysique', year: 1, courses: ['Biophysique des membranes', 'Radiations', 'Biomécanique'] },
-  { name: 'Histologie', year: 1, courses: ['Histologie générale', 'Histologie spéciale', 'Embryologie'] },
-  // Year 2
-  { name: 'Physiologie', year: 2, courses: ['Physiologie cardiovasculaire', 'Physiologie respiratoire', 'Physiologie rénale'] },
-  { name: 'Microbiologie', year: 2, courses: ['Bactériologie', 'Virologie', 'Parasitologie'] },
-  { name: 'Immunologie', year: 2, courses: ['Immunité innée', 'Immunité adaptative', 'Immunopathologie'] },
-  { name: 'Sémiologie', year: 2, courses: ['Sémiologie cardiovasculaire', 'Sémiologie digestive', 'Sémiologie neurologique'] },
-  // Year 3
-  { name: 'Pharmacologie', year: 3, courses: ['Pharmacocinétique', 'Pharmacodynamie', 'Pharmacovigilance'] },
-  { name: 'Anatomopathologie', year: 3, courses: ['Pathologie générale', 'Pathologie tumorale', 'Pathologie inflammatoire'] },
-  { name: 'Radiologie', year: 3, courses: ['Radioanatomie', 'Imagerie thoracique', 'Imagerie ostéoarticulaire'] },
-  // Year 4
-  { name: 'Médecine Interne', year: 4, courses: ['Hépato-gastro-entérologie', 'Néphrologie', 'Rhumatologie'] },
-  { name: 'Pédiatrie', year: 4, courses: ['Pédiatrie générale', 'Néonatologie', 'Urgences pédiatriques'] },
-  { name: 'Chirurgie Générale', year: 4, courses: ['Chirurgie digestive', 'Chirurgie orthopédique', 'Chirurgie vasculaire'] },
-  // Year 5
-  { name: 'Cardiologie', year: 5, courses: ['Cardiopathies ischémiques', 'Insuffisance cardiaque', 'Troubles du rythme'] },
-  { name: 'Neurologie', year: 5, courses: ['Pathologies vasculaires cérébrales', 'Épilepsie', 'Maladies neurodégénératives'] },
-  { name: 'Oncologie', year: 5, courses: ['Cancérogenèse', 'Chimiothérapie', 'Radiothérapie'] },
-  // Year 6
-  { name: 'Réanimation', year: 6, courses: ['Réanimation cardiovasculaire', 'Réanimation respiratoire', 'Sédation'] },
-  { name: 'Urgences', year: 6, courses: ['Urgences médicales', 'Urgences chirurgicales', 'Urgences traumatologiques'] },
-  { name: 'Éthique Médicale', year: 6, courses: ['Droits des patients', 'Consentement éclairé', 'Fin de vie'] },
-  // Year 7
-  { name: 'Préparation Internat', year: 7, courses: ['Synthèse cardiovasculaire', 'Synthèse neurologique', 'Synthèse infectieuse'] },
+const medicineModules = [
+  { name: 'Anatomie', year: 1, courses: ['Anatomie générale', 'Anatomie des membres', 'Anatomie du thorax'], discipline: 'medicine' },
+  { name: 'Biochimie', year: 1, courses: ['Biochimie structurale', 'Enzymologie', 'Métabolismes'], discipline: 'medicine' },
+  { name: 'Biophysique', year: 1, courses: ['Biophysique des membranes', 'Radiations', 'Biomécanique'], discipline: 'medicine' },
+  { name: 'Histologie', year: 1, courses: ['Histologie générale', 'Histologie spéciale', 'Embryologie'], discipline: 'medicine' },
+  { name: 'Physiologie', year: 2, courses: ['Physiologie cardiovasculaire', 'Physiologie respiratoire', 'Physiologie rénale'], discipline: 'medicine' },
+  { name: 'Microbiologie', year: 2, courses: ['Bactériologie', 'Virologie', 'Parasitologie'], discipline: 'medicine' },
+  { name: 'Immunologie', year: 2, courses: ['Immunité innée', 'Immunité adaptative', 'Immunopathologie'], discipline: 'medicine' },
+  { name: 'Sémiologie', year: 2, courses: ['Sémiologie cardiovasculaire', 'Sémiologie digestive', 'Sémiologie neurologique'], discipline: 'medicine' },
+  { name: 'Pharmacologie', year: 3, courses: ['Pharmacocinétique', 'Pharmacodynamie', 'Pharmacovigilance'], discipline: 'medicine' },
+  { name: 'Anatomopathologie', year: 3, courses: ['Pathologie générale', 'Pathologie tumorale', 'Pathologie inflammatoire'], discipline: 'medicine' },
+  { name: 'Radiologie', year: 3, courses: ['Radioanatomie', 'Imagerie thoracique', 'Imagerie ostéoarticulaire'], discipline: 'medicine' },
+  { name: 'Médecine Interne', year: 4, courses: ['Hépato-gastro-entérologie', 'Néphrologie', 'Rhumatologie'], discipline: 'medicine' },
+  { name: 'Pédiatrie', year: 4, courses: ['Pédiatrie générale', 'Néonatologie', 'Urgences pédiatriques'], discipline: 'medicine' },
+  { name: 'Chirurgie Générale', year: 4, courses: ['Chirurgie digestive', 'Chirurgie orthopédique', 'Chirurgie vasculaire'], discipline: 'medicine' },
+  { name: 'Cardiologie', year: 5, courses: ['Cardiopathies ischémiques', 'Insuffisance cardiaque', 'Troubles du rythme'], discipline: 'medicine' },
+  { name: 'Neurologie', year: 5, courses: ['Pathologies vasculaires cérébrales', 'Épilepsie', 'Maladies neurodégénératives'], discipline: 'medicine' },
+  { name: 'Oncologie', year: 5, courses: ['Cancérogenèse', 'Chimiothérapie', 'Radiothérapie'], discipline: 'medicine' },
+  { name: 'Réanimation', year: 6, courses: ['Réanimation cardiovasculaire', 'Réanimation respiratoire', 'Sédation'], discipline: 'medicine' },
+  { name: 'Urgences', year: 6, courses: ['Urgences médicales', 'Urgences chirurgicales', 'Urgences traumatologiques'], discipline: 'medicine' },
+  { name: 'Éthique Médicale', year: 6, courses: ['Droits des patients', 'Consentement éclairé', 'Fin de vie'], discipline: 'medicine' },
+  { name: 'Préparation Internat', year: 7, courses: ['Synthèse cardiovasculaire', 'Synthèse neurologique', 'Synthèse infectieuse'], discipline: 'medicine' },
 ];
 
-const quizzes = [
+const pharmacyModules = [
+  { name: 'Chimie Générale', year: 1, courses: ['Atomistique', 'Liaisons chimiques', 'Thermodynamique'], discipline: 'pharmacy' },
+  { name: 'Botanique Pharmaceutique', year: 1, courses: ['Botanique générale', 'Plantes médicinales', 'Pharmacognosie'], discipline: 'pharmacy' },
+  { name: 'Pharmacie Galénique', year: 2, courses: ['Formes pharmaceutiques', 'Voies d\'administration', 'Excipients'], discipline: 'pharmacy' },
+  { name: 'Chimie Thérapeutique', year: 2, courses: ['Relations structure-activité', 'Médicaments du SNC', 'Antibiotiques'], discipline: 'pharmacy' },
+  { name: 'Pharmacodynamie', year: 3, courses: ['Récepteurs', 'Mécanismes d\'action', 'Interactions'], discipline: 'pharmacy' },
+  { name: 'Législation Pharmaceutique', year: 3, courses: ['Code de la santé', 'Pharmacie d\'officine', 'Médicaments'], discipline: 'pharmacy' },
+  { name: 'Pharmacie Clinique', year: 4, courses: ['Bilans de médication', 'Pharmacovigilance', 'Suivi thérapeutique'], discipline: 'pharmacy' },
+  { name: 'Toxicologie', year: 4, courses: ['Toxicologie générale', 'Médicaments toxiques', 'Antidotes'], discipline: 'pharmacy' },
+  { name: 'Officine', year: 5, courses: ['Gestion d\'officine', 'Conseil pharmaceutique', 'Ordonnances'], discipline: 'pharmacy' },
+  { name: 'Pharmacie Hospitalière', year: 5, courses: ['PUI', 'Stérilisation', 'Préparations'], discipline: 'pharmacy' },
+  { name: 'Santé Publique', year: 6, courses: ['Épidémiologie', 'Prévention', 'Vaccination'], discipline: 'pharmacy' },
+  { name: 'Synthèse Pharmaceutique', year: 6, courses: ['Synthèse et dispensation', 'Cas cliniques complexes', 'Préparation à l\'internat'], discipline: 'pharmacy' },
+];
+
+const modules = [...medicineModules, ...pharmacyModules];
+
+const medicineQuizzes = [
   // Year 1 — Anatomie
   { quizId: 'Q001', year: 1, moduleName: 'Anatomie', course: 'Anatomie générale',
     questionText: 'Quel est le nombre total d\'os dans le corps humain adulte ?',
@@ -127,38 +138,56 @@ const quizzes = [
     correctAnswers: ['Amoxicilline 1g x3/j'], explanation: 'L\'amoxicilline est le traitement de 1ère intention de la PAC.' },
 ];
 
-const voiceExams = [
-  // Year 1-2: Basic sciences
-  { title: 'Cas clinique : Douleur thoracique', year: 1, moduleName: 'Anatomie',
-    clinicalCasePrompt: 'Patient de 55 ans, homme, se présente aux urgences pour une douleur thoracique rétrosternale constrictive évoluant depuis 2 heures. Il est pâle, diaphorétique. PA: 90/60, FC: 110/min.\n\nDécrivez votre prise en charge initiale.',
-    questions: [
-      { questionText: 'Quels sont les diagnostics différentiels à évoquer en priorité ?',
-        idealAnswer: 'Infarctus du myocarde, embolie pulmonaire, dissection aortique, péricardite aiguë, pneumothorax.',
-        criteria: [
-          { label: 'Syndrome coronarien aigu évoqué', keywords: ['infarctus', 'coronarien', 'SCA', 'IDM'] },
-          { label: 'Embolie pulmonaire citée', keywords: ['embolie', 'pulmonaire'] },
-          { label: 'Dissection aortique citée', keywords: ['dissection', 'aortique'] },
-        ]},
-      { questionText: 'Quel examen complémentaire réalisez-vous en urgence ?',
-        idealAnswer: 'ECG 12 dérivations dans les 10 minutes, dosage de la troponinémie, radiographie thoracique, NFS, CRP, bilan rénal.',
-        criteria: [
-          { label: 'ECG urgent', keywords: ['ECG', 'électrocardiogramme'] },
-          { label: 'Troponine demandée', keywords: ['troponine'] },
-          { label: 'Radiographie thoracique', keywords: ['radiographie', 'thorax', 'RX'] },
-        ]},
-    ]},
-  // Year 3: Pharmacology
-  { title: 'Cas clinique : Prescription médicamenteuse', year: 3, moduleName: 'Pharmacologie',
-    clinicalCasePrompt: 'Femme de 72 ans, polymédiquée, hospitalisée pour confusion. Traitement habituel : Ramipril 5mg, Metformine 850mg, Oméprazole 20mg, Acide acétylsalicylique 75mg, Simvastatine 20mg. Bilan : créatinine 120 µmol/L, kaliémie 5.8 mmol/L, glycémie 3.2 mmol/L.\n\nAnalysez la situation et proposez une prise en charge.',
-    questions: [
-      { questionText: 'Quelles sont les anomalies biologiques à corriger en urgence ?',
-        idealAnswer: 'Hypoglycémie (glycémie 3.2) et hyperkaliémie (kaliémie 5.8). L\'hypoglycémie peut être due à la metformine + âge + insuffisance rénale. L\'hyperkaliémie peut être due au Ramipril (IEC) sur insuffisance rénale.',
-        criteria: [
-          { label: 'Hypoglycémie identifiée', keywords: ['hypoglycémie', 'glycémie', '3.2'] },
-          { label: 'Hyperkaliémie identifiée', keywords: ['hyperkaliémie', 'kaliémie', '5.8'] },
-          { label: 'IEC lié à l\'hyperkaliémie', keywords: ['IEC', 'ramipril', 'kaliémie'] },
-        ]},
-    ]},
+const pharmacyQuizzes = [
+  { quizId: 'Q023', year: 1, moduleName: 'Chimie Générale', course: 'Atomistique',
+    questionText: 'Quel est le nombre maximum d\'électrons dans la couche L (n=2) ?',
+    options: ['2', '8', '18', '32'], correctAnswers: ['8'], explanation: 'La couche L (n=2) peut contenir au maximum 8 électrons.' },
+  { quizId: 'Q024', year: 1, moduleName: 'Chimie Générale', course: 'Liaisons chimiques',
+    questionText: 'Quel type de liaison implique un partage d\'électrons ?',
+    options: ['Liaison ionique', 'Liaison covalente', 'Liaison hydrogène', 'Liaison métallique'],
+    correctAnswers: ['Liaison covalente'], explanation: 'La liaison covalente est le partage d\'une paire d\'électrons.' },
+  { quizId: 'Q025', year: 1, moduleName: 'Botanique Pharmaceutique', course: 'Plantes médicinales',
+    questionText: 'Quelle plante est utilisée pour ses propriétés antispasmodiques ?',
+    options: ['Menthe poivrée', 'Digitale', 'Belladone', 'Morphine'],
+    correctAnswers: ['Menthe poivrée'], explanation: 'La menthe poivrée a des propriétés antispasmodiques digestives.' },
+  { quizId: 'Q026', year: 2, moduleName: 'Pharmacie Galénique', course: 'Formes pharmaceutiques',
+    questionText: 'Quel est le principal avantage d\'une forme LP (libération prolongée) ?',
+    options: ['Action plus rapide', 'Prise unique par jour', 'Moins d\'effets secondaires', 'Meilleur goût'],
+    correctAnswers: ['Prise unique par jour'], explanation: 'Les formes LP permettent de réduire la fréquence d\'administration.' },
+  { quizId: 'Q027', year: 2, moduleName: 'Chimie Thérapeutique', course: 'Relations structure-activité',
+    questionText: 'Quel groupement chimique est essentiel pour l\'activité des β-lactamines ?',
+    options: ['Noyau β-lactame', 'Noyau stéroïde', 'Benzénique', 'Amine primaire'],
+    correctAnswers: ['Noyau β-lactame'], explanation: 'Le noyau β-lactame est essentiel à l\'activité antibiotique.' },
+  { quizId: 'Q028', year: 3, moduleName: 'Pharmacodynamie', course: 'Récepteurs',
+    questionText: 'Qu\'est-ce qu\'un antagoniste compétitif ?',
+    options: ['Se lie au site actif de façon irréversible', 'Se lie au site actif et bloque l\'agoniste', 'Active le récepteur', 'Ne se lie pas au récepteur'],
+    correctAnswers: ['Se lie au site actif et bloque l\'agoniste'], explanation: 'Un antagoniste compétitif bloque le site actif de manière réversible.' },
+  { quizId: 'Q029', year: 3, moduleName: 'Législation Pharmaceutique', course: 'Code de la santé',
+    questionText: 'Quelle est la durée de validité d\'une ordonnance de médicaments stupéfiants ?',
+    options: ['24h', '3 jours', '7 jours', '30 jours'], correctAnswers: ['7 jours'], explanation: 'La prescription de stupéfiants est valable 7 jours.' },
+  { quizId: 'Q030', year: 4, moduleName: 'Pharmacie Clinique', course: 'Bilans de médication',
+    questionText: 'Quel médicament nécessite une surveillance de la kaliémie en association avec un IEC ?',
+    options: ['Paracétamol', 'Spironolactone', 'Amoxicilline', 'Oméprazole'],
+    correctAnswers: ['Spironolactone'], explanation: 'L\'association IEC + spironolactone augmente le risque d\'hyperkaliémie.' },
+  { quizId: 'Q031', year: 4, moduleName: 'Toxicologie', course: 'Antidotes',
+    questionText: 'Quel est l\'antidote du paracétamol en cas de surdosage ?',
+    options: ['Naloxone', 'N-acétylcystéine', 'Vitamine K', 'Flumazénil'],
+    correctAnswers: ['N-acétylcystéine'], explanation: 'La N-acétylcystéine est l\'antidote du paracétamol.' },
+  { quizId: 'Q032', year: 5, moduleName: 'Officine', course: 'Conseil pharmaceutique',
+    questionText: 'Quel conseil donner à un patient prenant des IPP au long cours ?',
+    options: ['Prendre avec du calcium', 'Surveillance de la vitamine B12', 'Éviter l\'alcool', 'Prendre à jeun'],
+    correctAnswers: ['Surveillance de la vitamine B12'], explanation: 'Les IPP au long cours peuvent entraîner une carence en vitamine B12.' },
+  { quizId: 'Q033', year: 5, moduleName: 'Pharmacie Hospitalière', course: 'Préparations',
+    questionText: 'Quelle est la classe de danger des cytotoxiques manipulés en PUI ?',
+    options: ['Danger 1', 'Danger 2', 'Danger 3', 'Danger 4'],
+    correctAnswers: ['Danger 3'], explanation: 'Les cytotoxiques sont classés danger 3 (mutagène/cancérogène).' },
+  { quizId: 'Q034', year: 6, moduleName: 'Santé Publique', course: 'Vaccination',
+    questionText: 'Quel est le schéma vaccinal du ROR chez l\'enfant ?',
+    options: ['1 dose à 12 mois', '1 dose à 12 mois + rappel à 6 ans', '2 doses à 1 mois d\'intervalle', '3 doses à 2 mois d\'intervalle'],
+    correctAnswers: ['1 dose à 12 mois + rappel à 6 ans'], explanation: 'Le ROR est administré à 12 mois avec un rappel à 6 ans.' },
+];
+
+const medicineVoiceExams = [
   // Year 4: Internal medicine
   { title: 'Cas clinique : Syndrome occlusif', year: 4, moduleName: 'Médecine Interne',
     clinicalCasePrompt: 'Patient de 68 ans, sans antécédent chirurgical, se présente pour des douleurs abdominales diffuses, arrêt des matières et des gaz depuis 48h, nausées. À l\'examen : abdomen distendu, tympanique, douloureux diffusément. T° 38.2°C, FC 100/min.\n\nQuel est votre diagnostic et votre prise en charge ?',
@@ -208,26 +237,10 @@ const voiceExams = [
           { label: 'Transfusion massive évoquée', keywords: ['transfusion', 'massive'] },
         ]},
     ]},
-  // Year 7: Intern prep — Complex case
-  { title: 'Cas clinique : Polypathologique complexe', year: 7, moduleName: 'Préparation Internat',
-    clinicalCasePrompt: 'Femme de 82 ans, autonomie réduite (GIR 3), hospitalisée pour altération de l\'état général. ATCD : HTA, diabète type 2, insuffisance rénale stade 3, AVC ischémique sylvien gauche en 2022 sans séquelle motrice. Traitement : Amlodipine, Metformine, Atorvastatine, Clopidogrel. Examen : T° 38.5°C, confusion, déshydratation, plaie du talon droit nécrotique.\n\nDressez la liste exhaustive des problèmes et votre plan de soins priorisé.',
-    questions: [
-      { questionText: 'Établissez la liste hiérarchisée des problèmes médicaux.',
-        idealAnswer: '1. Infection (plaie talon) pouvant expliquer la fièvre et la confusion. 2. Insuffisance rénale aiguë fonctionnelle sur déshydratation. 3. Déséquilibre du diabète. 4. Dénutrition. 5. Escarre talon droit. 6. Risque de chute. 7. Iatrogénie médicamenteuse.',
-        criteria: [
-          { label: 'Infection identifiée comme priorité', keywords: ['infection', 'plaie', 'fièvre'] },
-          { label: 'IRA fonctionnelle évoquée', keywords: ['insuffisance rénale', 'déshydratation', 'fonctionnelle'] },
-          { label: 'Dénutrition/escarre citée', keywords: ['dénutrition', 'escarre', 'plaie', 'talon'] },
-        ]},
-      { questionText: 'Quels examens prescrivez-vous en priorité ?',
-        idealAnswer: 'NFS, CRP, PCT, hémocultures (x2), bilan rénal, ionogramme, glycémie, HbA1c, ECBU, radiographie du talon, échographie rénale, dosage des médicaments (metformine → risque d\'acidose lactique).',
-        criteria: [
-          { label: 'Bilan infectieux complet', keywords: ['NFS', 'CRP', 'hémoculture', 'PCT'] },
-          { label: 'Fonction rénale évaluée', keywords: ['créatinine', 'rénal', 'urée'] },
-          { label: 'Acidose lactique évoquée', keywords: ['acidose', 'lactique', 'metformine'] },
-        ]},
-    ]},
 ];
+
+const quizzes = [...medicineQuizzes, ...pharmacyQuizzes];
+const voiceExams = [...medicineVoiceExams];
 
 async function seed() {
   console.log('Connecting to MongoDB...');
@@ -245,6 +258,7 @@ async function seed() {
       Module.deleteMany({}),
       Quiz.deleteMany({}),
       VoiceExam.deleteMany({}),
+      Counter.deleteMany({}),
     ]);
     console.log('Existing data cleared.');
   }
@@ -267,6 +281,7 @@ async function seed() {
       quizId: q.quizId,
       year: q.year,
       moduleId: mod._id,
+      discipline: mod.discipline,
       course: q.course,
       published: true,
       explanation: q.explanation,
@@ -282,13 +297,15 @@ async function seed() {
 
   // Insert voice exams
   const voiceExamDocs = [];
-  for (const v of voiceExams) {
+  for (const [idx, v] of voiceExams.entries()) {
     const mod = moduleMap[v.moduleName];
     if (!mod) { console.warn(`Module not found: ${v.moduleName}`); continue; }
     voiceExamDocs.push({
+      examId: `VE${String(idx + 1).padStart(3, '0')}`,
       title: v.title,
       year: v.year,
       moduleId: mod._id,
+      discipline: 'medicine',
       clinicalCasePrompt: v.clinicalCasePrompt,
       questions: v.questions,
     });

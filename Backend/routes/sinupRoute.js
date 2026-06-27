@@ -8,6 +8,7 @@ import logger from '../utils/logger.js';
 import { broadcast } from '../ws.js';
 import { validatePassword } from '../middleware/passwordValidator.js';
 import { validate } from '../middleware/validate.js';
+import { genUserId } from '../utils/idGenerator.js';
 
 const router = express.Router();
 
@@ -22,9 +23,10 @@ router.post(
   async (req, res) => {
     const secret = process.env.ADMIN_SECRET_CODE || '';
     const input = req.body.admin_secret || '';
-    const a = Buffer.from(secret);
-    const b = Buffer.from(input);
-    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    const maxLen = Math.max(secret.length, input.length || 0);
+    const a = Buffer.alloc(maxLen, secret, 'utf-8');
+    const b = Buffer.alloc(maxLen, input, 'utf-8');
+    if (!crypto.timingSafeEqual(a, b)) {
       return res.status(403).json({ message: 'Invalid admin secret.' });
     }
     const { email, password } = req.body;
@@ -32,7 +34,7 @@ router.post(
       const existingUser = await User.findOne({ email });
       if (existingUser) return res.status(400).json({ message: 'User already exists.' });
 
-      const userId = `A${email.split('@')[0]}`;
+      const userId = await genUserId();
       const name = email.split('@')[0];
       const user = new User({ userId, name, email, password, role: 'admin' });
       await user.save();

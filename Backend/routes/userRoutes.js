@@ -7,6 +7,7 @@ import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { verifyToken, requireAdmin } from '../controllers/authController.js';
+import { genUserId } from '../utils/idGenerator.js';
 
 const router = express.Router();
 
@@ -16,24 +17,26 @@ router.post(
   verifyToken,
   requireAdmin,
   [
-    body('userId').trim().notEmpty().isAlphanumeric().withMessage('userId must be alphanumeric'),
     body('name').trim().notEmpty(),
     body('email').isEmail().normalizeEmail(),
     body('role').optional().isIn(['user', 'admin']),
+    body('discipline').optional().isIn(['medicine', 'pharmacy', '']),
+    body('year').optional({ values: 'null' }).isInt({ min: 1, max: 6 }),
   ],
   validate,
   async (req, res) => {
-    const { userId, name, email, role } = req.body;
+    const { name, email, role, discipline, year } = req.body;
 
     // Generate a random temporary password (the model hashes it on save)
     const tempPassword = crypto.randomBytes(12).toString('hex');
 
-    const newUser = new User({ userId, name, email, password: tempPassword, role });
+    const userId = await genUserId();
+    const newUser = new User({ userId, name, email, password: tempPassword, role, discipline, year });
 
     try {
       await newUser.save();
       // Return the temp password ONCE so admin can share it with the user securely
-      res.status(201).json({ message: 'User created successfully', tempPassword });
+      res.status(201).json({ message: 'User created successfully', tempPassword, userId });
     } catch (error) {
       logger.error({ err: error, userId }, 'Add user failed');
       if (error.code === 11000) return res.status(409).json({ message: 'userId or email already exists' });
@@ -69,13 +72,15 @@ router.put(
     body('name').optional().trim().notEmpty(),
     body('email').optional().isEmail().normalizeEmail(),
     body('role').optional().isIn(['user', 'admin']),
+    body('discipline').optional().isIn(['medicine', 'pharmacy', '']),
+    body('year').optional({ values: 'null' }).isInt({ min: 1, max: 6 }),
   ],
   validate,
   catchAsync(async (req, res) => {
-    const { name, email, role } = req.body;
+    const { name, email, role, discipline, year } = req.body;
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
-      { ...(name && { name }), ...(email && { email }), ...(role && { role }) },
+      { ...(name && { name }), ...(email && { email }), ...(role && { role }), ...(discipline !== undefined && { discipline }), ...(year !== undefined && { year }) },
       { new: true }
     ).select('-password');
     if (!updatedUser) return res.status(404).json({ message: 'User not found' });

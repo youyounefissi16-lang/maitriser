@@ -43,16 +43,6 @@ const HelpPage = () => {
         </div>
 
         <div className="help-section">
-          <h2><Icon><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></Icon>{t('help.bookmarks')}</h2>
-          <p>{t('help.bookmarks.text')}</p>
-        </div>
-
-        <div className="help-section">
-          <h2><Icon><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></Icon>{t('help.results')}</h2>
-          <p>{t('help.results.text')}</p>
-        </div>
-
-        <div className="help-section">
           <h2><Icon><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></Icon>{t('help.feedback')}</h2>
           <p>{t('help.feedback.text')}</p>
         </div>

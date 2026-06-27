@@ -156,11 +156,12 @@ const BookManagement = () => {
         <div className="admin-table-wrapper">
           <table className="admin-table">
             <thead>
-              <tr>{['Title', 'Modules', 'Uploaded', 'Actions'].map((h) => <th key={h}>{h}</th>)}</tr>
+              <tr>{['ID', 'Title', 'Modules', 'Uploaded', 'Actions'].map((h) => <th key={h}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {books.map((book) => (
                 <tr key={book._id}>
+                  <td style={{ padding: 8, borderBottom: '1px solid var(--dc-border)' }}>{book.bookId || '—'}</td>
                   <td style={{ padding: 8, borderBottom: '1px solid var(--dc-border)' }}><FaBook style={{ color: 'var(--dc-highlight)', marginRight: 6 }} />{book.title}</td>
                   <td style={{ padding: 8, borderBottom: '1px solid var(--dc-border)' }}>
                     {book.moduleIds?.map((m) => (

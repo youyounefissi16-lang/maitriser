@@ -58,7 +58,7 @@ const VoiceExamManagement = () => {
 
   const fetchModules = async () => {
     try {
-      const res = await authFetch('/api/modules');
+      const res = await authFetch('/api/modules?discipline=medicine');
       if (!res.ok) { setError('Failed to load modules'); return; }
       const modData = await res.json();
       setModules(Array.isArray(modData) ? modData : []);
@@ -406,15 +406,16 @@ const VoiceExamManagement = () => {
       <div className="admin-table-wrapper">
         <table className="admin-table">
           <thead>
-            <tr>{['Title', 'Year', 'Module', 'Prompt', 'Questions', 'Images', 'Actions'].map((h) => (
+            <tr>{['ID', 'Title', 'Year', 'Module', 'Prompt', 'Questions', 'Images', 'Actions'].map((h) => (
               <th key={h}>{h}</th>
             ))}</tr>
           </thead>
           <tbody>
             {exams.length === 0
-              ? <tr><td colSpan="7" className="admin-empty">No voice exams</td></tr>
+              ? <tr><td colSpan="8" className="admin-empty">No voice exams</td></tr>
               : exams.map((exam) => (
                 <tr key={exam._id}>
+                  <td style={{ padding: 8, borderBottom: '1px solid var(--dc-border)' }}>{exam.examId || '—'}</td>
                   <td style={{ padding: 8, borderBottom: '1px solid var(--dc-border)' }}>{exam.title}</td>
                   <td style={{ padding: 8, borderBottom: '1px solid var(--dc-border)' }}>Y{exam.year}</td>
                   <td style={{ padding: 8, borderBottom: '1px solid var(--dc-border)' }}>{exam.moduleId?.name || '—'}</td>

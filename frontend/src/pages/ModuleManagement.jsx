@@ -9,14 +9,21 @@ import { logger } from '../utils/logger';
 import '../styles/sharedAdmin.css';
 
 const YEARS = [1, 2, 3, 4, 5, 6, 7];
+const DISCIPLINES = [
+  { value: '', label: 'All Disciplines' },
+  { value: 'medicine', label: 'Medicine' },
+  { value: 'pharmacy', label: 'Pharmacy' },
+];
 
 const ModuleManagement = () => {
   const notify = useToast();
   const play = useSound();
   const [modules, setModules]       = useState([]);
   const [filterYear, setFilterYear] = useState('');
+  const [filterDiscipline, setFilterDiscipline] = useState('');
   const [name, setName]             = useState('');
   const [year, setYear]             = useState('');
+  const [discipline, setDiscipline] = useState('medicine');
   const [courses, setCourses]       = useState([]);
   const [editId, setEditId]         = useState(null);
   const [showCourseInput, setShowCourseInput] = useState(false);
@@ -29,7 +36,10 @@ const ModuleManagement = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const fetchModules = async () => {
-    const url = filterYear ? `/api/modules?year=${filterYear}` : '/api/modules';
+    const params = new URLSearchParams();
+    if (filterYear) params.set('year', filterYear);
+    if (filterDiscipline) params.set('discipline', filterDiscipline);
+    const url = '/api/modules' + (params.toString() ? `?${params}` : '');
     try {
       setLoading(true);
       const res  = await authFetch(url);
@@ -42,7 +52,7 @@ const ModuleManagement = () => {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchModules(); }, [filterYear]);
+  useEffect(() => { fetchModules(); }, [filterYear, filterDiscipline]);
 
   const removeCourse = (idx) => setCourses((prev) => prev.filter((_, i) => i !== idx));
 
@@ -58,7 +68,7 @@ const ModuleManagement = () => {
       const res = await authFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, year: Number(year), courses }),
+        body: JSON.stringify({ name, year: Number(year), courses, discipline }),
       });
       if (res.ok) { fetchModules(); resetForm(); notify(editId ? 'Module updated' : 'Module created', 'success'); }
       else notify('Operation failed', 'error');
@@ -90,12 +100,13 @@ const ModuleManagement = () => {
     setEditId(mod._id);
     setName(mod.name);
     setYear(String(mod.year));
+    setDiscipline(mod.discipline || 'medicine');
     setCourses(mod.courses || []);
     setShowCourseInput(false);
     setNewCourse('');
   };
 
-  const resetForm = () => { setName(''); setYear(''); setCourses([]); setNewCourse(''); setShowCourseInput(false); setEditId(null); };
+  const resetForm = () => { setName(''); setYear(''); setDiscipline('medicine'); setCourses([]); setNewCourse(''); setShowCourseInput(false); setEditId(null); };
 
   const handleCSVImport = async (e) => {
     const file = e.target.files[0];
@@ -132,6 +143,9 @@ const ModuleManagement = () => {
         <h3>{editId ? 'Edit Module' : 'Add Module'}</h3>
         <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <input type="text" placeholder="Module name (e.g. Anatomy)" value={name} onChange={(e) => setName(e.target.value)} />
+          <select value={discipline} onChange={(e) => setDiscipline(e.target.value)}>
+            {DISCIPLINES.filter(d => d.value).map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+          </select>
           <select value={year} onChange={(e) => setYear(e.target.value)}>
             <option value="">-- Select Year --</option>
             {YEARS.map((y) => <option key={y} value={y}>Year {y}</option>)}
@@ -166,8 +180,11 @@ const ModuleManagement = () => {
         </form>
       </div>
 
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ marginRight: 8, fontWeight: 'bold', color: 'var(--dc-dark)' }}>Filter by Year:</label>
+      <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
+        <label style={{ fontWeight: 'bold', color: 'var(--dc-dark)' }}>Filter:</label>
+        <select value={filterDiscipline} onChange={(e) => setFilterDiscipline(e.target.value)}>
+          {DISCIPLINES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+        </select>
         <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)}>
           <option value="">All Years</option>
           {YEARS.map((y) => <option key={y} value={y}>Year {y}</option>)}

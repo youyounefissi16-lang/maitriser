@@ -5,12 +5,9 @@ import { SkeletonCard, SkeletonFilters } from '../components/LoadingSkeleton';
 import { logger } from '../utils/logger';
 import '../styles/teal-theme.css';
 
-const YEARS = [1, 2, 3, 4, 5, 6, 7];
-
 const VoiceExamPage = () => {
   const [modules, setModules]                     = useState([]);
   const [filteredModules, setFilteredModules]     = useState([]);
-  const [selectedYear, setSelectedYear]           = useState('');
   const [selectedModuleId, setSelectedModuleId]   = useState('');
   const [exams, setExams]                         = useState([]);
   const [activeExam, setActiveExam]               = useState(null);
@@ -21,20 +18,23 @@ const VoiceExamPage = () => {
 
   useEffect(() => { fetchModules(); }, []);
   useEffect(() => {
-    setFilteredModules(selectedYear ? modules.filter((m) => m.year === Number(selectedYear)) : modules);
+    const userYear = localStorage.getItem('userYear') || '';
+    setFilteredModules(userYear ? modules.filter((m) => m.year === Number(userYear)) : modules);
     setSelectedModuleId('');
-  }, [selectedYear, modules]);
+  }, [modules]);
   useEffect(() => {
     const controller = new AbortController();
     fetchExams(controller.signal);
     return () => controller.abort();
-  }, [selectedYear, selectedModuleId]);
+  }, [selectedModuleId]);
 
   const fetchModules = async () => {
     setLoadingModules(true);
     setModulesError(null);
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/api/modules`);
+      const discipline = localStorage.getItem('userDiscipline') || 'medicine';
+      const url = `${API_BASE_URL}/api/modules?discipline=${discipline}`;
+      const res = await fetchWithAuth(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setModules(await res.json());
     } catch (err) {
@@ -49,9 +49,11 @@ const VoiceExamPage = () => {
     setLoadingExams(true);
     setExamsError(null);
     try {
-      let url = `${API_BASE_URL}/api/voice-exams?`;
-      if (selectedModuleId)  url += `moduleId=${selectedModuleId}`;
-      else if (selectedYear) url += `year=${selectedYear}`;
+      const year = localStorage.getItem('userYear') || '';
+      const params = new URLSearchParams();
+      if (year)  params.set('year', year);
+      if (selectedModuleId)   params.set('moduleId', selectedModuleId);
+      let url = `${API_BASE_URL}/api/voice-exams?${params.toString()}`;
       const res = await fetchWithAuth(url, signal ? { signal } : undefined);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setExams(await res.json());
@@ -62,7 +64,7 @@ const VoiceExamPage = () => {
     } finally {
       setLoadingExams(false);
     }
-  }, [selectedYear, selectedModuleId]);
+  }, [selectedModuleId]);
 
   if (activeExam) {
     return (
@@ -88,10 +90,6 @@ const VoiceExamPage = () => {
           <SkeletonFilters count={2} />
         ) : (
           <div className="filters-row">
-            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
-              <option value="">Toutes les Années</option>
-              {YEARS.map((y) => <option key={y} value={y}>Année {y}</option>)}
-            </select>
             <select value={selectedModuleId} onChange={(e) => setSelectedModuleId(e.target.value)}>
               <option value="">Toutes les Spécialités</option>
               {filteredModules.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}

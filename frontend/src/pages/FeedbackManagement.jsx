@@ -103,7 +103,7 @@ const FeedbackManagement = () => {
                   <td style={{ fontSize: '0.8rem', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {fb.pageUrl ? (
                       <a href={fb.pageUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--dc-accent)' }}>
-                        {new URL(fb.pageUrl).pathname}
+                        {(() => { try { return new URL(fb.pageUrl).pathname; } catch { return fb.pageUrl; } })()}
                       </a>
                     ) : '-'}
                   </td>

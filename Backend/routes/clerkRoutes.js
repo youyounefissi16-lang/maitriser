@@ -54,7 +54,7 @@ router.post('/clerk-sync', async (req, res) => {
       }
     }
 
-    res.json({ message: 'Account synced', userId: user.userId, role: user.role });
+    res.json({ message: 'Account synced', userId: user.userId, role: user.role, discipline: user.discipline || '', year: user.year || null });
   } catch (err) {
     logger.error({ err }, 'clerk-sync failed');
     res.status(500).json({ message: 'Failed to sync account' });

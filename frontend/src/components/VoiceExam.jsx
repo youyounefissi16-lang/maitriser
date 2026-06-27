@@ -25,6 +25,7 @@ const Recorder = ({ onAudioReady, onTranscript }) => {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: mime });
 

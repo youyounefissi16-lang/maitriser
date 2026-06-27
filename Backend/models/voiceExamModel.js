@@ -12,9 +12,11 @@ const questionSchema = new mongoose.Schema({
 }, { _id: false });
 
 const voiceExamSchema = new mongoose.Schema({
+  examId:   { type: String, unique: true, trim: true },
   title:    { type: String, required: true },
   moduleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Module', required: true },
   year:     { type: Number, required: true, min: 1, max: 7 },
+  discipline: { type: String, enum: ['medicine'], default: 'medicine', required: true },
   clinicalCasePrompt: { type: String, required: true },
   questions: [questionSchema],
   images:    [{ type: String }],

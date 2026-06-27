@@ -9,22 +9,32 @@ import { cacheMiddleware, delPattern } from '../utils/cache.js';
 import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
+import path from 'path';
 
 const router = express.Router();
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({
+  dest: 'uploads/',
+  fileFilter: (_req, file, cb) => {
+    const allowedExt = path.extname(file.originalname).toLowerCase();
+    if (allowedExt === '.csv' || file.mimetype === 'text/csv') cb(null, true);
+    else cb(new Error('Only CSV files are allowed'));
+  },
+});
 
 // GET all modules (optionally filter by year) — cached 5 min
 router.get('/modules', cacheMiddleware(), catchAsync(async (req, res) => {
-  const filter = req.query.year ? { year: Number(req.query.year) } : {};
+  const filter = {};
+  if (req.query.year)       filter.year       = Number(req.query.year);
+  if (req.query.discipline) filter.discipline = String(req.query.discipline);
   const modules = await Module.find(filter).sort({ year: 1, name: 1 });
   res.json(modules);
 }));
 
 // POST create module
 router.post('/modules', requireAdmin, catchAsync(async (req, res) => {
-  const { name, year, courses } = req.body;
+  const { name, year, courses, discipline } = req.body;
   if (!name || !year) return res.status(400).json({ message: 'name and year are required' });
-  const module = await Module.create({ name, year, courses: courses || [] });
+  const module = await Module.create({ name, year, discipline: discipline || 'medicine', courses: courses || [] });
   delPattern('GET:/api/modules');
   res.status(201).json(module);
 }));
@@ -33,8 +43,10 @@ router.post('/modules', requireAdmin, catchAsync(async (req, res) => {
 router.put('/modules/:id', requireAdmin, [
   param('id').isMongoId(),
 ], validate, catchAsync(async (req, res) => {
-  const { name, year, courses } = req.body;
-  const updated = await Module.findByIdAndUpdate(req.params.id, { name, year, courses: courses || [] }, { new: true });
+  const { name, year, courses, discipline } = req.body;
+  const updates = { name, year, courses: courses || [] };
+  if (discipline) updates.discipline = discipline;
+  const updated = await Module.findByIdAndUpdate(req.params.id, updates, { new: true });
   if (!updated) return res.status(404).json({ message: 'Module not found' });
   delPattern('GET:/api/modules');
   res.json(updated);
@@ -69,14 +81,15 @@ router.post('/import-modules-csv', requireAdmin, upload.single('file'), catchAsy
       try {
         const name = row.name?.trim();
         const year = Number(row.year);
+        const discipline = row.discipline?.trim() || 'medicine';
         if (!name || !year) { results.errors.push(`Row missing name or year`); continue; }
 
-        const existing = await Module.findOne({ name, year });
+        const existing = await Module.findOne({ name, year, discipline });
         if (existing) { results.skipped.push(name); continue; }
 
         const courses = row.courses ? row.courses.split('|').map((c) => c.trim()).filter(Boolean) : [];
 
-        await Module.create({ name, year, courses });
+        await Module.create({ name, year, discipline, courses });
         results.created++;
       } catch (e) {
         results.errors.push(`Row "${row.name}": import error`);

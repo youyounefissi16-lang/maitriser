@@ -49,6 +49,7 @@ const MockExam = () => {
   const timerRef = useRef(null);
   const mountedRef = useRef(true);
   const restored = useRef(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -106,7 +107,8 @@ const MockExam = () => {
   }, [submitted]);
 
   const handleSubmit = useCallback(async () => {
-    if (submitted) return;
+    if (submitted || submittingRef.current) return;
+    submittingRef.current = true;
     play('submit');
     setSubmitting(true);
     clearTimeout(timerRef.current);
@@ -136,6 +138,7 @@ const MockExam = () => {
       logger.error({ err }, 'MockExam handleSubmit failed');
       if (mountedRef.current) notify('Erreur lors de la soumission. Veuillez réessayer.', 'error');
     } finally {
+      submittingRef.current = false;
       if (mountedRef.current) setSubmitting(false);
     }
   }, [submitted, questions, answers, notify, t]);
@@ -326,6 +329,9 @@ const MockExam = () => {
         <h3 style={{ fontSize: '18px', marginBottom: '8px', color: 'var(--text-dark)' }}>
           {current.question?.questionText}
         </h3>
+        {current.question?.questionImage && (
+          <img src={`${API_BASE_URL}/api/quiz-images/${current.question.questionImage}`} alt="Question" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6, marginTop: 8, marginBottom: 12 }} />
+        )}
         {current.question?.options?.length > 2 && (
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
             {t('mock.selectAll')}

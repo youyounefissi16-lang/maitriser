@@ -9,6 +9,7 @@ import { catchAsync } from '../utils/asyncHandler.js';
 import { validatePassword } from '../middleware/passwordValidator.js';
 import { addToBlacklist } from '../middleware/jwtBlacklist.js';
 import { validate } from '../middleware/validate.js';
+import { genUserId } from '../utils/idGenerator.js';
 
 const router = express.Router();
 
@@ -16,18 +17,18 @@ const router = express.Router();
 router.post(
   '/users/register',
   [
-    body('userId').trim().notEmpty().isAlphanumeric().withMessage('userId must be alphanumeric'),
     body('name').trim().notEmpty().withMessage('Name is required'),
     body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
     body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters').custom(validatePassword),
   ],
   validate,
   async (req, res) => {
-    const { userId, name, email, password } = req.body;
+    const { name, email, password } = req.body;
     try {
-      const existingUser = await User.findOne({ $or: [{ userId }, { email }] });
-      if (existingUser) return res.status(400).json({ message: 'userId or email already exists.' });
+      const existingUser = await User.findOne({ email });
+      if (existingUser) return res.status(400).json({ message: 'Email already exists.' });
 
+      const userId = await genUserId();
       const user = new User({ userId, name, email, password, role: 'user' });
       await user.save();
 
@@ -46,18 +47,18 @@ router.post(
   }
 );
 
-// POST /api/users/login — student login
+// POST /api/users/login — student login (by email)
 router.post(
   '/users/login',
   [
-    body('userId').trim().notEmpty().isAlphanumeric().withMessage('Invalid userId'),
+    body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
     body('password').notEmpty().withMessage('Password is required'),
   ],
   validate,
   async (req, res) => {
-    const { userId, password } = req.body;
+    const { email, password } = req.body;
     try {
-      const user = await User.findOne({ userId });
+      const user = await User.findOne({ email });
       if (!user) return res.status(401).json({ message: 'Invalid credentials.' });
 
       const isMatch = await user.comparePassword(password);
@@ -95,14 +96,18 @@ router.put(
   [
     body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
     body('email').optional().isEmail().normalizeEmail().withMessage('Valid email is required'),
+    body('discipline').optional().isIn(['medicine', 'pharmacy', '']).withMessage('Invalid discipline'),
+    body('year').optional({ values: 'null' }).isInt({ min: 1, max: 6 }).withMessage('Year must be between 1 and 6'),
   ],
   validate,
   async (req, res) => {
     try {
-      const { name, email } = req.body;
+      const { name, email, discipline, year } = req.body;
       const updates = {};
       if (name) updates.name = name;
       if (email) updates.email = email;
+      if (discipline !== undefined) updates.discipline = discipline;
+      if (year !== undefined) updates.year = year;
       if (!Object.keys(updates).length) return res.status(400).json({ message: 'Nothing to update' });
 
       const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true }).select('-password');

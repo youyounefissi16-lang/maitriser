@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import Book from '../models/bookModel.js';
+import Module from '../models/moduleModel.js';
 import { requireAdmin } from '../controllers/authController.js';
 import { cacheMiddleware, delPattern } from '../utils/cache.js';
 import logger from '../utils/logger.js';
@@ -12,6 +13,7 @@ import { catchAsync } from '../utils/asyncHandler.js';
 import { escapeRegex } from '../utils/escapeRegex.js';
 import { getPagination, paginatedResponse } from '../utils/paginate.js';
 import { validate } from '../middleware/validate.js';
+import { genBookId } from '../utils/idGenerator.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -51,8 +53,9 @@ router.post('/books/upload', requireAdmin, upload.single('file'), catchAsync(asy
     try { ids = Array.isArray(moduleIds) ? moduleIds : JSON.parse(moduleIds); }
     catch { if (req.file) fs.unlinkSync(req.file.path); return res.status(400).json({ message: 'moduleIds must be a valid JSON array' }); }
     if (!Array.isArray(ids) || !ids.length) { fs.unlinkSync(req.file.path); return res.status(400).json({ message: 'moduleIds must be a non-empty array' }); }
+    const bookId = await genBookId();
     const book = await Book.create({
-      title, moduleIds: ids,
+      bookId, title, moduleIds: ids,
       filename: req.file.filename,
       originalName: req.file.originalname,
     });
@@ -70,6 +73,10 @@ router.get('/books', cacheMiddleware(), catchAsync(async (req, res) => {
   const filter = {};
   if (req.query.moduleId) filter.moduleIds = String(req.query.moduleId);
   if (req.query.search)   filter.title = { $regex: escapeRegex(String(req.query.search)), $options: 'i' };
+  if (req.query.discipline) {
+    const modIds = await Module.find({ discipline: req.query.discipline }).select('_id');
+    filter.moduleIds = { ...(filter.moduleIds ? { $in: [filter.moduleIds].concat(modIds.map(m => m._id)) } : { $in: modIds.map(m => m._id) }) };
+  }
   const { skip, limit, page } = getPagination(req.query);
   const [books, total] = await Promise.all([
     Book.find(filter).populate('moduleIds', 'name year').sort({ createdAt: -1 }).skip(skip).limit(limit),

@@ -12,6 +12,7 @@ import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
 import { getPagination, paginatedResponse } from '../utils/paginate.js';
 import { validate } from '../middleware/validate.js';
+import { genExamId } from '../utils/idGenerator.js';
 
 const router = express.Router();
 
@@ -39,9 +40,9 @@ const upload = multer({
 });
 
 router.get('/voice-exams', cacheMiddleware(), catchAsync(async (req, res) => {
-  const filter = {};
-  if (req.query.year)     filter.year     = Number(req.query.year);
-  if (req.query.moduleId) filter.moduleId = String(req.query.moduleId);
+  if (!req.query.year) return res.json([]);
+  const filter = { year: Number(req.query.year) };
+  if (req.query.moduleId)   filter.moduleId   = String(req.query.moduleId);
   const exams = await VoiceExam.find(filter).populate('moduleId', 'name year').sort({ createdAt: -1 });
   res.json(exams);
 }));
@@ -68,8 +69,9 @@ router.post('/voice-exams', requireAdmin, upload.array('images', 10), catchAsync
 
   const images = req.files ? req.files.map((f) => f.filename) : [];
 
+  const examId = await genExamId();
   const exam = await VoiceExam.create({
-    title, moduleId, year: module.year, clinicalCasePrompt, questions, images,
+    examId, title, moduleId, year: module.year, discipline: 'medicine', clinicalCasePrompt, questions, images,
   });
   delPattern('GET:/api/voice-exams');
   res.status(201).json({ message: 'Voice exam created successfully', exam });
@@ -99,6 +101,7 @@ router.put('/voice-exams/:id', requireAdmin, upload.array('images', 10), [
   if (title)              updateFields.title = title;
   if (moduleId)           updateFields.moduleId = moduleId;
   if (year)               updateFields.year = year;
+  updateFields.discipline = 'medicine';
   if (clinicalCasePrompt) updateFields.clinicalCasePrompt = clinicalCasePrompt;
   if (questions)          updateFields.questions = questions;
   updateFields.images = images;
@@ -127,12 +130,12 @@ router.delete('/voice-exams/:id', requireAdmin, [
   res.json({ message: 'Voice exam deleted successfully' });
 }));
 
-router.get('/voice-exam-images/:filename', (req, res) => {
+router.get('/voice-exam-images/:filename', catchAsync(async (req, res) => {
   const filename = path.basename(req.params.filename);
   const filepath = path.join(UPLOAD_DIR, filename);
   if (!fs.existsSync(filepath)) return res.status(404).json({ message: 'Image not found' });
-  res.sendFile(filepath);
-});
+  await res.sendFile(filepath);
+}));
 
 router.post('/voice-exams/:id/submit', verifyToken, [
   param('id').isMongoId(),

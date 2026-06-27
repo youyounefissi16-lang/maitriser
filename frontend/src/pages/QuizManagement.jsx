@@ -15,8 +15,8 @@ const YEARS = [1, 2, 3, 4, 5, 6, 7];
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
 const emptyForm = () => ({
-  selectedYear: '', moduleId: '', course: '',
-  quizId: '', questionText: '',
+  discipline: '', selectedYear: '', moduleId: '', course: '',
+  questionText: '',
   options: ['', '', '', ''], correctIndices: [],
   explanation: '',
 });
@@ -49,6 +49,7 @@ const QuizManagement = () => {
   const [form, setForm]                     = useState(emptyForm());
   const [editId, setEditId]                 = useState(null);
   const [csvImporting, setCsvImporting]     = useState(false);
+  const [filterDiscipline, setFilterDiscipline] = useState('');
   const [filterYear, setFilterYear]         = useState('');
   const [filterModule, setFilterModule]     = useState('');
   const [filterSearch, setFilterSearch]     = useState('');
@@ -66,17 +67,22 @@ const QuizManagement = () => {
   const submittingRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [creatingCase, setCreatingCase]     = useState(false);
+  const [questionImage, setQuestionImage]   = useState(null);
+  const [imagePreview, setImagePreview]     = useState(null);
+  const [removeImage, setRemoveImage]       = useState(false);
   const emptyQuiz = () => ({ questionText: '', options: ['', '', '', ''], correctIndices: [], explanation: '' });
   const [caseForm, setCaseForm]             = useState({ year: '', moduleId: '', title: '', description: '', quizzes: [emptyQuiz(), emptyQuiz(), emptyQuiz()] });
 
-  useEffect(() => { fetchModules(); fetchQuizzes(); }, []);
+  useEffect(() => { fetchModules(); fetchQuizzes(); }, [filterDiscipline]);
 
   useEffect(() => {
-    setFilteredModules(form.selectedYear
-      ? modules.filter((m) => m.year === Number(form.selectedYear))
-      : modules);
+    setFilteredModules(modules.filter((m) => {
+      if (form.selectedYear && m.year !== Number(form.selectedYear)) return false;
+      if (form.discipline && m.discipline !== form.discipline) return false;
+      return true;
+    }));
     setForm((f) => ({ ...f, moduleId: '' }));
-  }, [form.selectedYear, modules]);
+  }, [form.selectedYear, form.discipline, modules]);
 
   useEffect(() => {
     if (!form.moduleId) { setModuleCourses([]); return; }
@@ -102,6 +108,7 @@ const QuizManagement = () => {
   const fetchQuizzes = async (p) => {
     const pg = p ?? page;
     let url = `/api/admin/quizzes?page=${pg}&limit=50`;
+    if (filterDiscipline) url += `&discipline=${filterDiscipline}`;
     if (filterModule) url += `&moduleId=${filterModule}`;
     else if (filterYear) url += `&year=${filterYear}`;
     if (filterSearch) url += `&search=${encodeURIComponent(filterSearch)}`;
@@ -118,7 +125,7 @@ const QuizManagement = () => {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchQuizzes(1); }, [filterYear, filterModule, filterSearch]);
+  useEffect(() => { fetchQuizzes(1); }, [filterDiscipline, filterYear, filterModule, filterSearch]);
 
   const setField = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -141,20 +148,35 @@ const QuizManagement = () => {
   const handleSubmit = async (published) => {
     play('submit');
     if (submittingRef.current) return;
-    const { quizId, moduleId, course, questionText, options, correctIndices, explanation } = form;
-    if (!quizId || !moduleId || !questionText) return notify('Please fill all required fields.', 'warning');
+    const { moduleId, course, questionText, options, correctIndices, explanation } = form;
+    if (!moduleId || !questionText) return notify('Please fill all required fields.', 'warning');
     if (options.some((o) => !o.trim())) return notify('All options must have text.', 'warning');
     if (correctIndices.length === 0) return notify('Select at least one correct answer.', 'warning');
 
     const correctAnswers = correctIndices.map((i) => options[i]);
-    const body = { quizId, moduleId, course: course || '', questionText, options, correctAnswers, explanation, published };
     const url    = editId ? `/api/edit-quiz/${editId}` : '/api/create-quiz';
     const method = editId ? 'PUT' : 'POST';
     submittingRef.current = true;
     setSubmitting(true);
 
     try {
-      const res = await authFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      let res;
+      if (questionImage || (editId && removeImage)) {
+        const fd = new FormData();
+        fd.append('moduleId', moduleId);
+        fd.append('questionText', questionText);
+        fd.append('options', JSON.stringify(options));
+        fd.append('correctAnswers', JSON.stringify(correctAnswers));
+        fd.append('course', course || '');
+        fd.append('published', String(published));
+        fd.append('explanation', explanation || '');
+        if (questionImage) fd.append('questionImage', questionImage);
+        if (editId && removeImage) fd.append('removeImage', 'true');
+        res = await authFetch(url, { method, body: fd });
+      } else {
+        const body = { moduleId, course: course || '', questionText, options, correctAnswers, explanation, published };
+        res = await authFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      }
       const data = res.ok ? await res.json() : null;
       if (res.ok) { fetchQuizzes(); resetForm(); notify(editId ? 'Quiz updated' : 'Quiz created', 'success'); }
       else notify(`Error: ${data?.message || 'Unknown error'}`, 'error');
@@ -192,19 +214,27 @@ const QuizManagement = () => {
 
     setEditId(quiz._id);
     setForm({
+      discipline: quiz.discipline || '',
       selectedYear: String(quiz.year),
       moduleId: quiz.moduleId?._id || quiz.moduleId,
       course: quiz.course || '',
-      quizId: quiz.quizId,
       questionText: quiz.question?.questionText || '',
       options: [...opts],
       correctIndices,
       explanation: quiz.explanation || quiz.question?.explanation || '',
     });
+    if (quiz.question?.questionImage) {
+      setImagePreview(`${API_BASE_URL}/api/quiz-images/${quiz.question.questionImage}`);
+      setRemoveImage(false);
+    } else {
+      setImagePreview(null);
+      setRemoveImage(false);
+    }
+    setQuestionImage(null);
     setFormKey((k) => k + 1);
   };
 
-  const resetForm = () => { setForm(emptyForm()); setEditId(null); setFormKey((k) => k + 1); };
+  const resetForm = () => { setForm(emptyForm()); setEditId(null); setFormKey((k) => k + 1); setQuestionImage(null); setImagePreview(null); setRemoveImage(false); };
 
   // ── Bulk selection ────────────────────────────────────────────────────────────
   const toggleSelect = (id) => {
@@ -359,7 +389,11 @@ const QuizManagement = () => {
     ? modules.filter((m) => m.year === Number(caseForm.year))
     : modules;
 
-  const filterModulesForBar = filterYear ? modules.filter((m) => m.year === Number(filterYear)) : modules;
+  const filterModulesForBar = modules.filter((m) => {
+    if (filterYear && m.year !== Number(filterYear)) return false;
+    if (filterDiscipline && m.discipline !== filterDiscipline) return false;
+    return true;
+  });
 
   return (
     <div className="quiz-management">
@@ -386,6 +420,11 @@ const QuizManagement = () => {
         <h2 className="qm-form-title">{editId ? t('admin.quiz.edit') : t('admin.quiz.addNew')}</h2>
 
         <div className="qm-filters">
+          <select value={form.discipline} onChange={(e) => { setField('discipline', e.target.value); setField('selectedYear', ''); }}>
+            <option value="">Choose Discipline</option>
+            <option value="medicine">Medicine</option>
+            <option value="pharmacy">Pharmacy</option>
+          </select>
           <select value={form.selectedYear} onChange={(e) => setField('selectedYear', e.target.value)}>
             <option value="">Choose Year</option>
             {YEARS.map((y) => <option key={y} value={y}>Year {y}</option>)}
@@ -398,12 +437,27 @@ const QuizManagement = () => {
             <option value="">{t('admin.quiz.course')}</option>
             {moduleCourses.map((c, i) => <option key={i} value={c}>{c}</option>)}
           </select>
-          <input className="qm-input-sm" type="text" value={form.quizId} onChange={(e) => setField('quizId', e.target.value)} placeholder={t('admin.quiz.quizId')} />
         </div>
 
         <div className="qm-section">
           <label className="qm-label">{t('admin.quiz.questionText')}</label>
           <textarea className="qm-textarea" value={form.questionText} onChange={(e) => setField('questionText', e.target.value)} placeholder="Write the question here..." rows={4} />
+        </div>
+
+        <div className="qm-section">
+          <label className="qm-label">Question Image (optional)</label>
+          {imagePreview && (
+            <div style={{ position: 'relative', display: 'inline-block', marginBottom: 8 }}>
+              <img src={imagePreview} alt="Preview" style={{ maxWidth: 200, borderRadius: 6, border: '1px solid #ccc' }} />
+              <button type="button" onClick={() => { setImagePreview(null); setQuestionImage(null); setRemoveImage(true); }} style={{ position: 'absolute', top: 4, right: 4, background: 'red', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 12, lineHeight: '22px', textAlign: 'center' }}>&times;</button>
+            </div>
+          )}
+          {!imagePreview && (
+            <input type="file" accept="image/*" onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) { setQuestionImage(file); setImagePreview(URL.createObjectURL(file)); setRemoveImage(false); }
+            }} />
+          )}
         </div>
 
         <div className="qm-section">
@@ -455,6 +509,11 @@ const QuizManagement = () => {
       </div>
 
       <div className="qm-list-filters">
+        <select value={filterDiscipline} onChange={(e) => { setFilterDiscipline(e.target.value); setFilterModule(''); }}>
+          <option value="">All Disciplines</option>
+          <option value="medicine">Medicine</option>
+          <option value="pharmacy">Pharmacy</option>
+        </select>
         <select value={filterYear} onChange={(e) => { setFilterYear(e.target.value); setFilterModule(''); }}>
           <option value="">{t('admin.quiz.allYears')}</option>
           {YEARS.map((y) => <option key={y} value={y}>Year {y}</option>)}
@@ -503,12 +562,12 @@ const QuizManagement = () => {
                 <input type="checkbox" checked={quizzes.length > 0 && selectedIds.size === quizzes.length}
                   onChange={toggleSelectAll} style={{ cursor: 'pointer', width: '16px', height: '16px' }} />
               </th>
-              {[t('admin.quiz.quizId'), t('admin.quiz.year'), t('admin.quiz.module'), t('admin.quiz.course'), t('admin.quiz.published'), 'Case', t('admin.quiz.questionText'), t('admin.quiz.options'), t('admin.quiz.correctAnswers'), 'Actions'].map((h) => (<th key={h}>{h}</th>))}
+              {[t('admin.quiz.quizId'), t('admin.quiz.year'), t('admin.quiz.module'), t('admin.quiz.course'), 'Discipline', t('admin.quiz.published'), 'Case', t('admin.quiz.questionText'), t('admin.quiz.options'), t('admin.quiz.correctAnswers'), 'Actions'].map((h) => (<th key={h}>{h}</th>))}
             </tr>
           </thead>
           <tbody>
             {quizzes.length === 0
-                ? <tr><td colSpan="11" className="qm-empty">{t('admin.quiz.noQuizzes')}</td></tr>
+                ? <tr><td colSpan="12" className="qm-empty">{t('admin.quiz.noQuizzes')}</td></tr>
                 : quizzes.map((quiz) => (
                   <tr key={quiz._id} style={{ background: selectedIds.has(quiz._id) ? 'var(--dc-cream-light)' : undefined }}>
                     <td>
@@ -519,6 +578,7 @@ const QuizManagement = () => {
                     <td>Y{quiz.year}</td>
                     <td>{quiz.moduleId?.name || '—'}</td>
                     <td>{quiz.course || '—'}</td>
+                    <td style={{ textTransform: 'capitalize' }}>{quiz.discipline || '—'}</td>
                     <td>{quiz.published
                       ? <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>{t('admin.quiz.published')}</span>
                       : <span style={{ color: 'var(--dc-text-muted)' }}>{t('admin.quiz.draft')}</span>}</td>

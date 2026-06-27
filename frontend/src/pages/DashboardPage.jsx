@@ -277,15 +277,7 @@ const DashboardPage = () => {
                 <span className="action-name">{t('dashboard.quickActions.library')}</span>
                 <span className="action-desc">{t('dashboard.quickActions.library.desc')}</span>
               </button>
-              <button className="action-card" onClick={() => { play('navigate'); navigate('/bookmarks'); }}>
-                <span className="action-icon-wrap">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--teal-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                  </svg>
-                </span>
-                <span className="action-name">{t('dashboard.quickActions.bookmarks')}</span>
-                <span className="action-desc">{t('dashboard.quickActions.bookmarks.desc')}</span>
-              </button>
+
             </div>
 
             <h2 className="dashboard-section-title">{t('dashboard.recent')}</h2>
@@ -304,9 +296,6 @@ const DashboardPage = () => {
                     </div>
                   </div>
                 ))}
-                <button className="btn-ghost" onClick={() => { play('navigate'); navigate('/resultPage'); }}>
-                  {t('dashboard.seeAll')} &rarr;
-                </button>
               </div>
             ) : (
               <p className="dashboard-recent-empty">{t('dashboard.recent.none')}</p>

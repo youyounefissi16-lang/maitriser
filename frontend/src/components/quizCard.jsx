@@ -29,7 +29,6 @@ const QuizCard = () => {
   const [quizTimer, setQuizTimer] = useState(TIMER_SECONDS);
   const [timeLeft, setTimeLeft]   = useState(quizTimer);
   const [timerActive, setTimerActive] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
   const timerRef = useRef(null);
   const submittingRef = useRef(false);
   const handleSubmitRef = useRef(null);
@@ -105,21 +104,6 @@ const QuizCard = () => {
     return () => window.removeEventListener('beforeunload', onLeave);
   }, [submitted]);
 
-  useEffect(() => {
-    if (!quizData?.quizId) return;
-    const controller = new AbortController();
-    (async () => {
-      try {
-        const res = await fetchWithAuth(`${API_BASE_URL}/api/bookmarks/${quizData.quizId}`, { signal: controller.signal });
-        if (controller.signal.aborted) return;
-        if (!res.ok) return;
-        const data = await res.json();
-        setBookmarked(data.bookmarked);
-      } catch (err) { logger.error({ err, quizId: quizData?.quizId }, 'QuizCard bookmark check failed'); }
-    })();
-    return () => controller.abort();
-  }, [quizData?.quizId]);
-
   const startTimer = () => { if (!timerActive) setTimerActive(true); };
 
   const toggleOption = (opt) => {
@@ -184,20 +168,6 @@ const QuizCard = () => {
   };
   handleSubmitRef.current = handleSubmit;
 
-  const toggleBookmark = async () => {
-    try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/api/bookmarks/toggle`, {
-        method: 'POST',
-        body: { quizId: quizData.quizId },
-      });
-      if (!res.ok) return notify(t('quizcard.error.bookmark'), 'error');
-      const data = await res.json();
-      setBookmarked(data.bookmarked);
-      play('bookmark');
-      notify(data.bookmarked ? t('quizcard.bookmark.added') : t('quizcard.bookmark.removed'), 'success');
-    } catch (err) { logger.error({ err, quizId: quizData?.quizId }, 'QuizCard toggleBookmark failed'); notify(t('quizcard.error.network'), 'error'); }
-  };
-
   const formatTime = (s) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
@@ -216,12 +186,7 @@ const QuizCard = () => {
     <div className="page-teal">
       <div className="quiz-container-teal">
         <div className="flex-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-dark)' }}>{quizName}</h2>
-            <button onClick={toggleBookmark} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', padding: '4px' }} title={bookmarked ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
-              {bookmarked ? '★' : '☆'}
-            </button>
-          </div>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-dark)' }}>{quizName}</h2>
           {!studyMode && (
             <span className={`timer-badge ${timerActive ? 'timer-running' : ''}`} style={{
               color: timeLeft <= 10 ? 'var(--color-danger)' : 'var(--text-dark)',

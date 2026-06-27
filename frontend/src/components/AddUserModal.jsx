@@ -5,7 +5,6 @@ import '../styles/modal.css';
 
 const AddUserModal = ({ setShowModal, fetchUsers }) => {
   const [userData, setUserData] = useState({
-    userId: '',
     name: '',
     email: '',
     role: 'user',
@@ -24,10 +23,11 @@ const AddUserModal = ({ setShowModal, fetchUsers }) => {
     try {
       // POST /api/add-user — backend generates a temp password and returns it once
       const response = await axiosAdmin.post('/add-user', userData);
-      const { tempPassword: tp } = response.data;
+      const { tempPassword: tp, userId: genUid } = response.data;
 
       if (tp) {
         setTempPassword(tp);
+        if (genUid) { try { localStorage.setItem('lastGenUserId', genUid); } catch {} }
       } else {
         fetchUsers();
         setShowModal(false);
@@ -42,15 +42,17 @@ const AddUserModal = ({ setShowModal, fetchUsers }) => {
 
   // After showing the temp password, close and refresh
   if (tempPassword) {
+    const genUid = (() => { try { return localStorage.getItem('lastGenUserId'); } catch { return null; } })();
     return (
       <div className="modal-overlay">
         <div className="modal-content">
           <h3>User Created</h3>
+          {genUid && <p style={{ fontWeight: 700, fontSize: '1.1rem' }}>User ID: {genUid}</p>}
           <p>Share this temporary password with the user. It will not be shown again.</p>
           <code style={{ display: 'block', padding: '12px', background: 'var(--dc-cream)', borderRadius: '4px', fontSize: '16px', margin: '12px 0' }}>
             {tempPassword}
           </code>
-          <button onClick={() => { fetchUsers(); setShowModal(false); }}>Close</button>
+          <button onClick={() => { try { localStorage.removeItem('lastGenUserId'); } catch {} fetchUsers(); setShowModal(false); }}>Close</button>
         </div>
       </div>
     );
@@ -61,10 +63,6 @@ const AddUserModal = ({ setShowModal, fetchUsers }) => {
       <div className="modal-content">
         <h3>Add New User</h3>
         <form onSubmit={handleSubmit}>
-          <div className="input-group">
-            <label htmlFor="userId">User ID</label>
-            <input type="text" id="userId" name="userId" value={userData.userId} onChange={handleChange} required />
-          </div>
           <div className="input-group">
             <label htmlFor="name">Name</label>
             <input type="text" id="name" name="name" value={userData.name} onChange={handleChange} required />

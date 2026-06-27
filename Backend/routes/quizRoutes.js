@@ -12,9 +12,43 @@ import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
 import { escapeRegex } from '../utils/escapeRegex.js';
 import { validate } from '../middleware/validate.js';
+import { genQuizId } from '../utils/idGenerator.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const router = express.Router();
-const upload = multer({ dest: 'uploads/' });
+const csvUpload = multer({
+  dest: 'uploads/',
+  fileFilter: (_req, file, cb) => {
+    const allowedExt = path.extname(file.originalname).toLowerCase();
+    if (allowedExt === '.csv' || file.mimetype === 'text/csv') cb(null, true);
+    else cb(new Error('Only CSV files are allowed'));
+  },
+});
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+const QUIZ_IMG_DIR = path.join(__dirname, '..', 'uploads', 'quiz-images');
+if (!fs.existsSync(QUIZ_IMG_DIR)) fs.mkdirSync(QUIZ_IMG_DIR, { recursive: true });
+
+const quizImageStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, QUIZ_IMG_DIR),
+  filename: (_req, file, cb) => {
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${unique}${ext}`);
+  },
+});
+const quizImageUpload = multer({
+  storage: quizImageStorage,
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) cb(null, true);
+    else cb(new Error('Only image files are allowed (png, jpg, jpeg, gif, webp, svg)'));
+  },
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 // ── Student-safe helpers ──────────────────────────────────────────────────────
 // Strip correctAnswers before sending to students
@@ -29,10 +63,16 @@ const stripAnswers = (quiz) => {
 
 // GET /api/quizzes — list (student-safe: no correctAnswers, only published)
 router.get('/quizzes', catchAsync(async (req, res) => {
-  const filter = { published: true };
-  if (req.query.year)     filter.year     = Number(req.query.year);
-  if (req.query.moduleId) filter.moduleId = Array.isArray(req.query.moduleId) ? String(req.query.moduleId[0]) : String(req.query.moduleId);
-  if (req.query.course)   filter.course   = String(req.query.course);
+  if (!req.query.discipline || !req.query.year) return res.json(paginatedResponse([], 0, 1, 1));
+  const filter = { published: true, discipline: req.query.discipline };
+  const isResidanat = Number(req.query.year) === 7 && req.query.discipline === 'medicine';
+  if (!isResidanat) filter.year = Number(req.query.year);
+  if (req.query.moduleId)   filter.moduleId   = Array.isArray(req.query.moduleId) ? String(req.query.moduleId[0]) : String(req.query.moduleId);
+  if (req.query.course)     filter.course     = String(req.query.course);
+  if (req.query.search)   filter.$or = [
+    { quizId: { $regex: escapeRegex(req.query.search), $options: 'i' } },
+    { 'question.questionText': { $regex: escapeRegex(req.query.search), $options: 'i' } },
+  ];
   const { skip, limit, page } = getPagination(req.query);
   const [quizzes, total] = await Promise.all([
     Quiz.find(filter).populate('moduleId', 'name year').populate('caseId', 'title').sort({ createdAt: -1 }).skip(skip).limit(limit),
@@ -56,8 +96,9 @@ router.get('/quizzes/:id', [
 // GET /api/admin/quizzes — full quiz list including correctAnswers (admin only)
 router.get('/admin/quizzes', requireAdmin, catchAsync(async (req, res) => {
   const filter = {};
-  if (req.query.year)     filter.year     = Number(req.query.year);
-  if (req.query.moduleId) filter.moduleId = Array.isArray(req.query.moduleId) ? String(req.query.moduleId[0]) : String(req.query.moduleId);
+  if (req.query.discipline) filter.discipline = req.query.discipline;
+  if (req.query.year)       filter.year       = Number(req.query.year);
+  if (req.query.moduleId)   filter.moduleId   = Array.isArray(req.query.moduleId) ? String(req.query.moduleId[0]) : String(req.query.moduleId);
   if (req.query.search)   filter.$or = [
     { quizId: { $regex: escapeRegex(req.query.search), $options: 'i' } },
     { 'question.questionText': { $regex: escapeRegex(req.query.search), $options: 'i' } },
@@ -71,8 +112,7 @@ router.get('/admin/quizzes', requireAdmin, catchAsync(async (req, res) => {
 }));
 
 // POST /api/create-quiz
-router.post('/create-quiz', requireAdmin, [
-  body('quizId').trim().notEmpty().isAlphanumeric(),
+router.post('/create-quiz', requireAdmin, quizImageUpload.single('questionImage'), [
   body('moduleId').isMongoId(),
   body('questionText').trim().notEmpty(),
   body('options').isArray({ min: 2 }),
@@ -82,27 +122,25 @@ router.post('/create-quiz', requireAdmin, [
   body('explanation').optional().trim(),
   body('timer').optional().isInt({ min: 0 }),
 ], validate, catchAsync(async (req, res) => {
-  const { quizId, moduleId, questionText, options, correctAnswers, course, published, explanation, timer } = req.body;
-  if (!quizId || !moduleId || !questionText || !options?.length || !correctAnswers?.length)
+  const { moduleId, questionText, options, correctAnswers, course, published, explanation, timer } = req.body;
+  if (!moduleId || !questionText || !options?.length || !correctAnswers?.length)
     return res.status(400).json({ message: 'All fields are required' });
-
-  const existing = await Quiz.findOne({ quizId });
-  if (existing) return res.status(400).json({ message: `Quiz ID "${quizId}" already exists` });
 
   const module = await Module.findById(moduleId);
   if (!module) return res.status(404).json({ message: 'Module not found' });
 
+  const quizId = await genQuizId();
+  const questionImage = req.file ? req.file.filename : null;
   const quiz = await Quiz.create({
-    quizId, moduleId, year: module.year, course, published, explanation, timer,
-    question: { questionText, options, correctAnswers },
+    quizId, moduleId, year: module.year, discipline: module.discipline, course, published, explanation, timer,
+    question: { questionText, questionImage, options, correctAnswers },
   });
   res.status(201).json({ message: 'Quiz created successfully', quiz });
 }));
 
 // PUT /api/edit-quiz/:id
-router.put('/edit-quiz/:id', requireAdmin, [
+router.put('/edit-quiz/:id', requireAdmin, quizImageUpload.single('questionImage'), [
   param('id').isMongoId(),
-  body('quizId').optional().trim().notEmpty(),
   body('moduleId').optional().isMongoId(),
   body('questionText').optional().trim().notEmpty(),
   body('options').optional().isArray({ min: 2 }),
@@ -112,29 +150,35 @@ router.put('/edit-quiz/:id', requireAdmin, [
   body('explanation').optional().trim(),
   body('timer').optional().isInt({ min: 0 }),
 ], validate, catchAsync(async (req, res) => {
-  const { quizId, moduleId, questionText, options, correctAnswers, course, published, explanation, timer } = req.body;
-  let year;
+  const { moduleId, questionText, options, correctAnswers, course, published, explanation, timer } = req.body;
+  let year, discipline;
   if (moduleId) {
     const module = await Module.findById(moduleId);
     if (!module) return res.status(404).json({ message: 'Module not found' });
     year = module.year;
+    discipline = module.discipline;
   }
-  const updated = await Quiz.findByIdAndUpdate(
-    req.params.id,
-    {
-      ...(quizId     && { quizId }),
-      ...(moduleId   && { moduleId }),
-      ...(year       && { year }),
-      ...(course     !== undefined && { course }),
-      ...(published  !== undefined && { published }),
-      ...(explanation !== undefined && { explanation }),
-      ...(timer      !== undefined && { timer }),
-      ...(questionText    && { 'question.questionText': questionText }),
-      ...(options         && { 'question.options': options }),
-      ...(correctAnswers  && { 'question.correctAnswers': correctAnswers }),
-    },
-    { new: true }
-  );
+
+  const updates = {
+    ...(moduleId   && { moduleId }),
+    ...(year       && { year }),
+    ...(discipline && { discipline }),
+    ...(course     !== undefined && { course }),
+    ...(published  !== undefined && { published }),
+    ...(explanation !== undefined && { explanation }),
+    ...(timer      !== undefined && { timer }),
+    ...(questionText    && { 'question.questionText': questionText }),
+    ...(options         && { 'question.options': options }),
+    ...(correctAnswers  && { 'question.correctAnswers': correctAnswers }),
+  };
+
+  if (req.file) {
+    updates['question.questionImage'] = req.file.filename;
+  } else if (req.body.removeImage === 'true') {
+    updates['question.questionImage'] = null;
+  }
+
+  const updated = await Quiz.findByIdAndUpdate(req.params.id, updates, { new: true });
   if (!updated) return res.status(404).json({ message: 'Quiz not found' });
   res.json({ message: 'Quiz updated successfully', quiz: updated });
 }));
@@ -145,6 +189,10 @@ router.delete('/delete-quiz/:id', requireAdmin, [
 ], validate, catchAsync(async (req, res) => {
   const quiz = await Quiz.findByIdAndDelete(req.params.id);
   if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+  if (quiz.question?.questionImage) {
+    const imgPath = path.join(QUIZ_IMG_DIR, quiz.question.questionImage);
+    if (fs.existsSync(imgPath)) try { fs.unlinkSync(imgPath); } catch {}
+  }
   res.json({ message: 'Quiz deleted successfully' });
 }));
 
@@ -171,7 +219,6 @@ router.post('/admin/create-case-quizzes', requireAdmin, catchAsync(async (req, r
 
   const caseDoc = await Case.create({ title, description, moduleId: module._id, year: module.year });
 
-  const caseIdShort = String(caseDoc._id).slice(-6).toUpperCase();
   const created = [];
   for (let i = 0; i < quizzes.length; i++) {
     const q = quizzes[i];
@@ -182,11 +229,13 @@ router.post('/admin/create-case-quizzes', requireAdmin, catchAsync(async (req, r
     if (correctAnswers.some((a) => a === undefined))
       return res.status(400).json({ message: `Quiz ${i + 1}: correctIndices out of range` });
 
+    const quizId = await genQuizId();
     const quiz = await Quiz.create({
-      quizId: `CASE-${caseIdShort}-Q${i + 1}`,
+      quizId,
       quizName: `${title} — Q${i + 1}`,
       moduleId: module._id,
       year: module.year,
+      discipline: module.discipline,
       caseId: caseDoc._id,
       published: false,
       explanation: q.explanation || '',
@@ -231,8 +280,16 @@ router.post('/bulk/delete', requireAdmin, [
   res.json({ message: `${result.deletedCount} quiz supprimés` });
 }));
 
+// GET /api/quiz-images/:filename — serve quiz images
+router.get('/quiz-images/:filename', catchAsync(async (req, res) => {
+  const filename = path.basename(req.params.filename);
+  const filepath = path.join(QUIZ_IMG_DIR, filename);
+  if (!fs.existsSync(filepath)) return res.status(404).json({ message: 'Image not found' });
+  await res.sendFile(filepath);
+}));
+
 // POST /api/import-quizzes-csv
-router.post('/import-quizzes-csv', requireAdmin, upload.single('file'), catchAsync(async (req, res) => {
+router.post('/import-quizzes-csv', requireAdmin, csvUpload.single('file'), catchAsync(async (req, res) => {
   let filePath;
   try {
     if (!req.file) return res.status(400).json({ message: 'CSV file is required' });
@@ -246,13 +303,13 @@ router.post('/import-quizzes-csv', requireAdmin, upload.single('file'), catchAsy
 
     const results = { created: 0, skipped: [], errors: [] };
 
-    const moduleKeys = [...new Set(records.map((r) => `${r.moduleName?.trim()}|${Number(r.year)}`))];
+    const moduleKeys = [...new Set(records.map((r) => `${r.discipline?.trim()}|${r.moduleName?.trim()}|${Number(r.year)}`))];
     const modules = await Module.find({ $or: moduleKeys.map((k) => {
-      const [name, year] = k.split('|');
-      return { name, year: Number(year) };
+      const [discipline, name, year] = k.split('|');
+      return { discipline, name, year: Number(year) };
     }) });
     const moduleMap = {};
-    modules.forEach((m) => { moduleMap[`${m.name}|${m.year}`] = m; });
+    modules.forEach((m) => { moduleMap[`${m.discipline}|${m.name}|${m.year}`] = m; });
 
     const quizIds = records.map((r) => r.quizId?.trim()).filter(Boolean);
     const existingQuizzes = await Quiz.find({ quizId: { $in: quizIds } }, { quizId: 1 });
@@ -261,17 +318,25 @@ router.post('/import-quizzes-csv', requireAdmin, upload.single('file'), catchAsy
 
     for (const row of records) {
       try {
-        const key = `${row.moduleName?.trim()}|${Number(row.year)}`;
-        const module = moduleMap[key];
-        if (!module) { results.errors.push(`Row "${row.quizId}": module "${row.moduleName}" year ${row.year} not found`); continue; }
+        const discipline = row.discipline?.trim();
+        if (!discipline) { results.errors.push(`Row "${row.quizId || '?'}": missing discipline column`); continue; }
 
-        if (existingMap[row.quizId?.trim()]) { results.skipped.push(row.quizId); continue; }
+        const key = `${discipline}|${row.moduleName?.trim()}|${Number(row.year)}`;
+        const module = moduleMap[key];
+        if (!module) { results.errors.push(`Row "${row.quizId || '?'}": module "${row.moduleName}" year ${row.year} discipline ${discipline} not found`); continue; }
+
+        const csvQuizId = row.quizId?.trim();
+        if (csvQuizId) {
+          if (existingMap[csvQuizId]) { results.skipped.push(csvQuizId); continue; }
+        }
+        const quizId = csvQuizId || await genQuizId();
 
         await Quiz.create({
-          quizId:   row.quizId.trim(),
+          quizId,
           quizName: row.quizName?.trim() || '',
           moduleId: module._id,
           year:     module.year,
+          discipline: module.discipline,
           question: {
             questionText:   row.questionText.trim(),
             options:        row.options.split('|').map((o) => o.trim()),

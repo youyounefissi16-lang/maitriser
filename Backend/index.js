@@ -3,6 +3,10 @@ import mongoose from 'mongoose';
 import { logger } from './utils/logger.js';
 import app from './app.js';
 import { initWS } from './ws.js';
+import { generateId } from './utils/idGenerator.js';
+import VoiceExam from './models/voiceExamModel.js';
+import Book from './models/bookModel.js';
+import Counter from './models/counterModel.js';
 
 dotenv.config();
 
@@ -19,11 +23,35 @@ if (!process.env.ADMIN_SECRET_CODE || process.env.ADMIN_SECRET_CODE.length < 16)
   logger.warn('ADMIN_SECRET_CODE must be at least 16 characters — admin claim will reject weak codes');
 }
 
+const migrateIds = async () => {
+  const examsWithoutId = await VoiceExam.find({ examId: { $exists: false } }).cursor();
+  let examCount = 0;
+  for await (const exam of examsWithoutId) {
+    exam.examId = await generateId('VE');
+    await exam.save();
+    examCount++;
+  }
+  if (examCount) logger.info({ count: examCount }, 'Migrated voice exams with auto-generated examId');
+
+  const booksWithoutId = await Book.find({ bookId: { $exists: false } }).cursor();
+  let bookCount = 0;
+  for await (const book of booksWithoutId) {
+    book.bookId = await generateId('B');
+    await book.save();
+    bookCount++;
+  }
+  if (bookCount) logger.info({ count: bookCount }, 'Migrated books with auto-generated bookId');
+};
+
 mongoose.connect(process.env.MONGODB_URI, {
   serverSelectionTimeoutMS: 5000,
   connectTimeoutMS: 5000,
 })
-  .then(() => logger.info('Database connected'))
+  .then(async () => {
+    logger.info('Database connected');
+    await Counter.init();
+    await migrateIds();
+  })
   .catch((err) => { logger.fatal({ err }, 'Database connection failed'); process.exit(1); });
 
 const PORT = process.env.PORT || 4000;

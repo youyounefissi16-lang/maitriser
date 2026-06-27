@@ -9,12 +9,9 @@ import { shuffle } from '../utils/shuffle';
 import { useSound } from '../context/SoundContext';
 import '../styles/teal-theme.css';
 
-const YEARS = [1, 2, 3, 4, 5, 6, 7];
-
 const QuizPage = () => {
   const [modules, setModules]                     = useState([]);
   const [filteredModules, setFilteredModules]     = useState([]);
-  const [selectedYear, setSelectedYear]           = useState('');
   const [selectedModuleId, setSelectedModuleId]   = useState('');
   const [selectedCourse, setSelectedCourse]       = useState('');
   const [moduleCourses, setModuleCourses]         = useState([]);
@@ -44,10 +41,11 @@ const QuizPage = () => {
     return () => controller.abort();
   }, []);
   useEffect(() => {
-    setFilteredModules(selectedYear ? modules.filter((m) => m.year === Number(selectedYear)) : modules);
+    const userYear = localStorage.getItem('userYear') || '';
+    setFilteredModules(userYear ? modules.filter((m) => m.year === Number(userYear)) : modules);
     setSelectedModuleId('');
     setSelectedCourse('');
-  }, [selectedYear, modules]);
+  }, [modules]);
 
   useEffect(() => {
     if (!selectedModuleId) { setModuleCourses([]); setSelectedCourse(''); return; }
@@ -58,13 +56,15 @@ const QuizPage = () => {
 
   useEffect(() => {
     fetchQuizzes(1);
-  }, [selectedYear, selectedModuleId, selectedCourse]);
+  }, [selectedModuleId, selectedCourse]);
 
   const fetchModules = async (signal) => {
     setLoadingModules(true);
     setModulesError(null);
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/api/modules`, { signal });
+      const discipline = localStorage.getItem('userDiscipline') || '';
+      const url = discipline ? `${API_BASE_URL}/api/modules?discipline=${discipline}` : `${API_BASE_URL}/api/modules`;
+      const res = await fetchWithAuth(url, { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       if (!signal.aborted) setModules(await res.json());
     } catch (err) {
@@ -83,10 +83,14 @@ const QuizPage = () => {
     setLoadingQuizzes(true);
     setQuizzesError(null);
     try {
+      const discipline = localStorage.getItem('userDiscipline') || '';
+      const year = localStorage.getItem('userYear') || '';
       let url = `${API_BASE_URL}/api/quizzes?page=${pageNum}&limit=50`;
+      if (discipline)    url += `&discipline=${discipline}`;
+      if (year)          url += `&year=${year}`;
       if (selectedModuleId)      url += `&moduleId=${selectedModuleId}`;
-      else if (selectedYear)     url += `&year=${selectedYear}`;
       if (selectedCourse)        url += `&course=${encodeURIComponent(selectedCourse)}`;
+      if (searchQuery.trim())    url += `&search=${encodeURIComponent(searchQuery.trim())}`;
       const res = await fetchWithAuth(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d = await res.json();
@@ -99,14 +103,9 @@ const QuizPage = () => {
     } finally {
       if (mountedRef.current) setLoadingQuizzes(false);
     }
-  }, [selectedYear, selectedModuleId, selectedCourse]);
+  }, [selectedModuleId, selectedCourse, searchQuery]);
 
-  const filteredQuizzes = searchQuery.trim()
-    ? quizzes.filter((q) =>
-        (q.question?.questionText || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (q.quizId || '').toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : quizzes;
+  const filteredQuizzes = quizzes;
 
   const handleStart = (quiz) => {
     navigate(`/quiz/${quiz._id}`, {
@@ -197,10 +196,6 @@ const QuizPage = () => {
           <SkeletonFilters count={3} />
         ) : (
           <div className="filters-row">
-            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
-              <option value="">{t('quiz.filters.allYears')}</option>
-              {YEARS.map((y) => <option key={y} value={y}>Année {y}</option>)}
-            </select>
             <select value={selectedModuleId} onChange={(e) => setSelectedModuleId(e.target.value)}>
               <option value="">{t('quiz.filters.allModules')}</option>
               {filteredModules.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
@@ -261,6 +256,9 @@ const QuizPage = () => {
                   <div className="qid">{quiz.quizId}</div>
                   {quiz.caseId && <span style={{ display: 'inline-block', background: '#e3f2fd', color: '#04484F', padding: '2px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px' }}>📋 {t('quiz.case')}</span>}
                   <h3>{quiz.question?.questionText?.substring(0, 80) || quiz.quizId}</h3>
+                  {quiz.question?.questionImage && (
+                    <img src={`${API_BASE_URL}/api/quiz-images/${quiz.question.questionImage}`} alt="Question" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6, marginTop: 8, marginBottom: 8 }} />
+                  )}
                   <div className="qmeta">
                     Année {quiz.year} — {quiz.moduleId?.name || ''}{quiz.course ? ` — ${quiz.course}` : ''}
                   </div>

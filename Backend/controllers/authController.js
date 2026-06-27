@@ -19,7 +19,7 @@ export const verifyToken = async (req, res, next) => {
       const payload = await clerkVerify(token, { secretKey: process.env.CLERK_SECRET_KEY });
       const user = await User.findOne({ clerkId: payload.sub });
       if (!user) return res.status(401).json({ message: 'User not found. Sync your account first.' });
-      req.user = { id: user._id, userId: user.userId, clerkId: payload.sub, role: user.role };
+      req.user = { id: user._id, userId: user.userId, clerkId: payload.sub, role: user.role, discipline: user.discipline || '', year: user.year || null };
       return next();
     } catch (err) {
       logger.warn({ err }, 'Clerk verification failed, falling back to JWT');
@@ -31,7 +31,7 @@ export const verifyToken = async (req, res, next) => {
     if (isBlacklisted(token)) return res.status(401).json({ message: 'Token revoked.' });
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ message: 'User not found.' });
-    req.user = { id: user._id, userId: user.userId, role: user.role, email: user.email, name: user.name };
+    req.user = { id: user._id, userId: user.userId, role: user.role, email: user.email, name: user.name, discipline: user.discipline || '', year: user.year || null };
     return next();
   } catch (err) {
     logger.debug({ err }, 'JWT token verification failed');

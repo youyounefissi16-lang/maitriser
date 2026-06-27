@@ -5,6 +5,7 @@ const quizSchema = new mongoose.Schema({
   quizName: { type: String, default: '' },
   moduleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Module', required: true },
   year:     { type: Number, required: true, min: 1, max: 7 },
+  discipline: { type: String, enum: ['medicine', 'pharmacy'], required: true },
   course:   { type: String, default: '' },
   published: { type: Boolean, default: false },
   explanation: { type: String, default: '' },
@@ -12,13 +13,14 @@ const quizSchema = new mongoose.Schema({
   caseId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Case', default: null },
   question: {
     questionText:   { type: String, required: true },
+    questionImage:  { type: String, default: null },
     options:        { type: [String], required: true },
     correctAnswers: { type: [String], required: true },
   },
   }, { timestamps: true });
 
-quizSchema.index({ published: 1, year: 1, moduleId: 1, createdAt: -1 });
-quizSchema.index({ year: 1, moduleId: 1, course: 1 });
+quizSchema.index({ published: 1, year: 1, discipline: 1, moduleId: 1, createdAt: -1 });
+quizSchema.index({ year: 1, discipline: 1, moduleId: 1, course: 1 });
 quizSchema.index({ moduleId: 1 });
 quizSchema.index({ caseId: 1 });
 quizSchema.index({ createdAt: -1 });

@@ -73,6 +73,9 @@ const ReviewPage = () => {
                 <div key={r._id} className="quiz-card-item" style={{ borderLeft: '4px solid var(--color-danger)' }}>
                   <div className="qid">{quiz.quizId || ''}</div>
                   <h3>{quiz.question?.questionText?.substring(0, 80) || quiz._id}</h3>
+                  {quiz.question?.questionImage && (
+                    <img src={`${API_BASE_URL}/api/quiz-images/${quiz.question.questionImage}`} alt="Question" style={{ maxWidth: '100%', maxHeight: 150, borderRadius: 6, marginTop: 6, marginBottom: 6 }} />
+                  )}
                   <div className="qmeta">
                     Last attempt: {new Date(r.timestamp).toLocaleDateString('en-US')}
                   </div>

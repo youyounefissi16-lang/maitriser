@@ -8,6 +8,8 @@ const userSchema = new mongoose.Schema({
   email:    { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, default: null },
   role:     { type: String, enum: ['user', 'admin'], default: 'user' },
+  discipline: { type: String, enum: ['medicine', 'pharmacy', ''], default: '' },
+  year:   { type: Number, default: null },
   emailVerified:      { type: Boolean, default: false },
   verificationToken:  { type: String, default: null },
   verificationExpiry: { type: Date, default: null },
