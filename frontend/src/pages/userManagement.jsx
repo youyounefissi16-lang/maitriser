@@ -14,6 +14,7 @@ import Pagination from '../components/Pagination';
 import UserHistoryModal from '../components/UserHistoryModal';
 
 const UserManagement = () => {
+  useEffect(() => { document.title = 'User Management — Admin'; }, []);
   const notify = useToast();
   const play = useSound();
   const [users, setUsers] = useState([]);

@@ -5,6 +5,7 @@ import { logger } from '../utils/logger';
 import '../styles/Reports.css';
 
 const Reports = () => {
+  useEffect(() => { document.title = 'Reports — Admin'; }, []);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

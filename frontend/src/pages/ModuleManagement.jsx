@@ -16,6 +16,7 @@ const DISCIPLINES = [
 ];
 
 const ModuleManagement = () => {
+  useEffect(() => { document.title = 'Module Management — Admin'; }, []);
   const notify = useToast();
   const play = useSound();
   const [modules, setModules]       = useState([]);

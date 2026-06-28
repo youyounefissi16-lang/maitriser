@@ -4,6 +4,7 @@ import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { useTranslation } from '../context/LanguageContext';
 import { useSound } from '../context/SoundContext';
 import { logger } from '../utils/logger';
+import DailyQuizModal from '../components/DailyQuizModal';
 import '../styles/teal-theme.css';
 
 const CACHE_KEY = 'dashboardStats';
@@ -52,6 +53,10 @@ const DashboardPage = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [recentResults, setRecentResults] = useState([]);
+  const [dailyData, setDailyData]       = useState(null);
+  const [dailyLoading, setDailyLoading] = useState(true);
+  const [showDailyQuiz, setShowDailyQuiz] = useState(false);
+  const [subscription, setSubscription] = useState(null);
   const [dismissedGuide, setDismissedGuide] = useState(() => {
     try { return localStorage.getItem('guideDismissed') === 'true'; } catch { return false; }
   });
@@ -86,7 +91,27 @@ const DashboardPage = () => {
     }
 
     const userId = (() => { try { return localStorage.getItem('userId'); } catch { return null; } })();
-    if (!userId) { setLoading(false); return; }
+    if (!userId) { setLoading(false); setDailyLoading(false); return; }
+
+    // Fetch daily quiz
+    (async () => {
+      try {
+        const res = await fetchWithAuth(`${API_BASE_URL}/api/quizzes/daily`);
+        if (res.ok) setDailyData(await res.json());
+      } catch { /* ignore */ }
+      setDailyLoading(false);
+    })();
+
+    // Fetch subscription
+    (async () => {
+      try {
+        const res = await fetchWithAuth(`${API_BASE_URL}/api/payments/subscription`);
+        if (res.ok) {
+          const d = await res.json();
+          setSubscription(d.subscription);
+        }
+      } catch { /* ignore */ }
+    })();
 
     (async () => {
       try {
@@ -134,6 +159,37 @@ const DashboardPage = () => {
   return (
     <div className="page-teal">
       <div className="dashboard-container">
+        {!dailyLoading && dailyData && (
+          <div className={`daily-hero ${dailyData.completed ? 'completed' : ''}`}>
+            {dailyData.completed ? (
+              <>
+                <div className="daily-hero-content">
+                  <div className="daily-hero-icon">&#10004;&#65039;</div>
+                  <div>
+                    <h3 className="daily-hero-title">Today's Quiz — Done!</h3>
+                    <p className="daily-hero-desc">
+                      {dailyData.results?.score ?? 0}/{dailyData.results?.total ?? 0}
+                      ({dailyData.results?.total > 0 ? Math.round(((dailyData.results?.score ?? 0) / dailyData.results.total) * 100) : 0}%)
+                    </p>
+                  </div>
+                </div>
+                <button className="daily-hero-btn secondary" onClick={() => setShowDailyQuiz(true)}>View Answers</button>
+              </>
+            ) : dailyData.quizzes?.length > 0 ? (
+              <>
+                <div className="daily-hero-content">
+                  <div className="daily-hero-icon">&#128197;</div>
+                  <div>
+                    <h3 className="daily-hero-title">Today's Quiz</h3>
+                    <p className="daily-hero-desc">{dailyData.quizzes.length} questions to test your knowledge</p>
+                  </div>
+                </div>
+                <button className="daily-hero-btn" onClick={() => setShowDailyQuiz(true)}>Start Quiz</button>
+              </>
+            ) : null}
+          </div>
+        )}
+
         <div className="dashboard-header">
           <div>
             <h1 className="dashboard-greeting">
@@ -230,6 +286,12 @@ const DashboardPage = () => {
               </div>
             </div>
 
+            {subscription && subscription.status !== 'active' && (
+              <div className="upgrade-banner">
+                <span>&#11088; Upgrade to Premium — unlock all quizzes, oral exams &amp; books</span>
+                <button className="upgrade-banner-btn" onClick={() => navigate('/pricing')}>View Plans</button>
+              </div>
+            )}
             <h2 className="dashboard-section-title">{t('dashboard.quickActions')}</h2>
             <div className="dashboard-actions">
               <button className="action-card" onClick={() => { play('navigate'); navigate('/quizPage'); }}>
@@ -303,6 +365,42 @@ const DashboardPage = () => {
           </>
         )}
       </div>
+
+      {showDailyQuiz && dailyData && !dailyData.completed && dailyData.quizzes && (
+        <DailyQuizModal
+          quizzes={dailyData.quizzes}
+          onComplete={(result) => setDailyData({ completed: true, results: result })}
+          onClose={() => setShowDailyQuiz(false)}
+        />
+      )}
+
+      {showDailyQuiz && dailyData && dailyData.completed && (
+        <div className="daily-quiz-overlay" onClick={() => setShowDailyQuiz(false)}>
+          <div className="daily-quiz-card" onClick={(e) => e.stopPropagation()}>
+            <div className="daily-quiz-header">
+              <span className="daily-quiz-title">&#128197; Today's Quiz Results</span>
+              <button className="daily-quiz-close-btn" onClick={() => setShowDailyQuiz(false)}>&times;</button>
+            </div>
+            <div className={`daily-summary-score ${
+              dailyData.results?.total > 0
+                ? ((dailyData.results?.score ?? 0) / dailyData.results.total >= 0.7 ? 'good' : (dailyData.results?.score ?? 0) / dailyData.results.total >= 0.5 ? 'ok' : 'bad')
+                : 'bad'
+            }`}>
+              {dailyData.results?.score ?? 0}/{dailyData.results?.total ?? 0}
+              ({dailyData.results?.total > 0 ? Math.round(((dailyData.results?.score ?? 0) / dailyData.results.total) * 100) : 0}%)
+            </div>
+            <div style={{ marginTop: 16 }}>
+              {(dailyData.results?.answers || []).map((ans, i) => (
+                <div key={i} className={`daily-summary-item ${ans.correct ? 'correct' : 'wrong'}`}>
+                  <span style={{ flex: 1, fontSize: '0.82rem' }}>Q{i + 1}: {ans.questionText?.substring(0, 60)}</span>
+                  <span style={{ fontWeight: 700, marginLeft: 8 }}>{ans.correct ? '&#10003;' : '&#10007;'}</span>
+                </div>
+              ))}
+            </div>
+            <button className="daily-quiz-check-btn" style={{ marginTop: 20 }} onClick={() => setShowDailyQuiz(false)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { authFetch } from '../config/authFetch';
-import Spinner from '../components/Spinner';
+import Spinner from './Spinner';
 import '../styles/modal.css';
 
 const EditUserModal = ({ user, setShowModal, fetchUsers }) => {
@@ -35,8 +35,8 @@ const EditUserModal = ({ user, setShowModal, fetchUsers }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
+    <div className="modal-overlay" onClick={() => !saving && setShowModal(false)}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <h3>Edit User</h3>
         {error && <div className="error-banner" style={{ marginBottom: 12 }}>{error}<button onClick={() => setError('')}>&times;</button></div>}
         <label>Name</label>

@@ -8,6 +8,7 @@ const quizSchema = new mongoose.Schema({
   discipline: { type: String, enum: ['medicine', 'pharmacy'], required: true },
   course:   { type: String, default: '' },
   published: { type: Boolean, default: false },
+  premium: { type: Boolean, default: false },
   explanation: { type: String, default: '' },
   timer:    { type: Number, default: null },
   caseId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Case', default: null },

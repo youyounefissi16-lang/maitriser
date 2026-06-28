@@ -1,6 +1,7 @@
 import ContactMessage from '../models/contactModel.js';
 import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
+import { paginatedResponse } from '../utils/paginate.js';
 import { broadcast } from '../ws.js';
 
 // Add a new contact message
@@ -46,7 +47,7 @@ export const getAllContactMessages = catchAsync(async (req, res) => {
     ]);
     res.status(200).json(
       skip !== undefined
-        ? { data: contactMessages, page, limit, total, totalPages: Math.ceil(total / limit) }
+        ? paginatedResponse(contactMessages, total, page, limit)
         : contactMessages
     );
 });

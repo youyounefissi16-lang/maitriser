@@ -36,7 +36,8 @@ function size() {
 
 function cacheMiddleware(ttl = defaultTTL) {
   return (req, res, next) => {
-    const key = `${req.method}:${req.originalUrl}`;
+    const uid = req.user?.id || '';
+    const key = `${req.method}:${req.originalUrl}:${uid}`;
     const cached = get(key);
     if (cached) return res.json(cached);
 

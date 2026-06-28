@@ -37,8 +37,8 @@ const ProfilePage = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [changingPwd, setChangingPwd] = useState(false);
-
   const [userId, setUserId] = useState('');
+  const [subscription, setSubscription] = useState(null);
   const [results, setResults] = useState([]);
   const [statsLoading, setStatsLoading] = useState(true);
 
@@ -64,6 +64,12 @@ const ProfilePage = () => {
         if (!cancelled) logger.error({ err }, 'ProfilePage fetchResults failed');
       }
       if (!cancelled) setStatsLoading(false);
+    })();
+    (async () => {
+      try {
+        const res = await fetchWithAuth(`${API_BASE_URL}/api/payments/subscription`);
+        if (res.ok) { const d = await res.json(); setSubscription(d.subscription); }
+      } catch { /* ignore */ }
     })();
     return () => { cancelled = true; };
   }, [userId]);
@@ -245,6 +251,24 @@ const ProfilePage = () => {
         </button>
       </div>
 
+      {subscription && (
+        <div className="card-teal profile-sub-card">
+          <div className="profile-sub-header">
+            <span className="profile-sub-icon">{subscription.status === 'active' ? '⭐' : '🔓'}</span>
+            <h3 className="profile-sub-title">{subscription.status === 'active' ? 'My Subscription' : 'No Active Subscription'}</h3>
+          </div>
+          {subscription.status === 'active' ? (
+            <>
+              <div className="profile-sub-row"><span className="profile-sub-label">Plan</span><span className="profile-sub-value">{subscription.planName || '—'}</span></div>
+              <div className="profile-sub-row"><span className="profile-sub-label">Status</span><span className="profile-sub-badge active">Active</span></div>
+              <div className="profile-sub-row"><span className="profile-sub-label">Expires</span><span className="profile-sub-value">{subscription.endDate ? new Date(subscription.endDate).toLocaleDateString() : '—'}</span></div>
+            </>
+          ) : (
+            <p className="profile-sub-desc">Subscribe to unlock all premium quizzes, oral exams and books.</p>
+          )}
+          <button className="btn-primary profile-btn" onClick={() => navigate('/pricing')}>View Plans</button>
+        </div>
+      )}
       {!statsLoading && (
         <div className="card-teal" style={{ maxWidth: 560, margin: '24px auto 0', padding: 24 }}>
           <h2 className="profile-heading">📊 My Progress</h2>

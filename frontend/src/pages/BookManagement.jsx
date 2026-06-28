@@ -12,6 +12,7 @@ import '../styles/sharedAdmin.css';
 const YEARS = [1, 2, 3, 4, 5, 6, 7];
 
 const BookManagement = () => {
+  useEffect(() => { document.title = 'Book Management — Admin'; }, []);
   const notify = useToast();
   const play = useSound();
   const [modules, setModules]           = useState([]);

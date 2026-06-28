@@ -13,6 +13,8 @@ import { catchAsync } from '../utils/asyncHandler.js';
 import { getPagination, paginatedResponse } from '../utils/paginate.js';
 import { validate } from '../middleware/validate.js';
 import { genExamId } from '../utils/idGenerator.js';
+import { checkSubscription } from '../middleware/requireSubscription.js';
+import User from '../models/userModel.js';
 
 const router = express.Router();
 
@@ -31,7 +33,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (_req, file, cb) => {
-    const allowed = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+    const allowed = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowed.includes(ext)) cb(null, true);
     else cb(new Error('Only image files are allowed (png, jpg, jpeg, gif, webp, svg)'));
@@ -39,20 +41,43 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-router.get('/voice-exams', cacheMiddleware(), catchAsync(async (req, res) => {
+router.get('/voice-exams', verifyToken, cacheMiddleware(), catchAsync(async (req, res) => {
   if (!req.query.year) return res.json([]);
+  if (!await checkSubscription(req.user?.id)) return res.json([]);
   const filter = { year: Number(req.query.year) };
   if (req.query.moduleId)   filter.moduleId   = String(req.query.moduleId);
   const exams = await VoiceExam.find(filter).populate('moduleId', 'name year').sort({ createdAt: -1 });
   res.json(exams);
 }));
 
-router.get('/voice-exams/:id', [
+router.get('/voice-exams/:id', verifyToken, [
   param('id').isMongoId(),
 ], validate, catchAsync(async (req, res) => {
+  if (!await checkSubscription(req.user?.id)) return res.status(403).json({ message: 'Subscription required' });
   const exam = await VoiceExam.findById(req.params.id).populate('moduleId', 'name year');
   if (!exam) return res.status(404).json({ message: 'Voice exam not found' });
   res.json(exam);
+}));
+
+// POST /api/voice-exams/start-free-trial — start a random premium exam for free (once per user)
+router.post('/voice-exams/start-free-trial', verifyToken, catchAsync(async (req, res) => {
+  const user = await User.findById(req.user.id);
+  if (!user) return res.status(404).json({ message: 'User not found' });
+  if (user.freeTrialUsed) return res.status(400).json({ message: 'Free trial already used' });
+
+  const filter = { premium: true };
+  if (user.year && user.discipline) {
+    filter.year = user.year;
+    filter.discipline = user.discipline;
+  }
+  const exams = await VoiceExam.find(filter).populate('moduleId', 'name year');
+  if (exams.length === 0) return res.status(400).json({ message: 'No premium exams available for your level' });
+
+  const exam = exams[Math.floor(Math.random() * exams.length)];
+  user.freeTrialUsed = true;
+  await user.save();
+
+  res.json({ message: 'Free trial started', exam });
 }));
 
 router.post('/voice-exams', requireAdmin, upload.array('images', 10), catchAsync(async (req, res) => {

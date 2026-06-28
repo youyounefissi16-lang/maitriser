@@ -74,37 +74,35 @@ router.put(
     body('role').optional().isIn(['user', 'admin']),
     body('discipline').optional().isIn(['medicine', 'pharmacy', '']),
     body('year').optional({ values: 'null' }).isInt({ min: 1, max: 6 }),
+    body('subscription.status').optional().isIn(['none', 'active', 'expired', 'cancelled']),
+    body('subscription.planId').optional({ values: 'null' }).isMongoId(),
+    body('subscription.planName').optional().trim(),
+    body('subscription.startDate').optional({ values: 'null' }).isISO8601(),
+    body('subscription.endDate').optional({ values: 'null' }).isISO8601(),
   ],
   validate,
   catchAsync(async (req, res) => {
-    const { name, email, role, discipline, year } = req.body;
+    const { name, email, role, discipline, year, subscription } = req.body;
+    const updates = {};
+    if (name) updates.name = name;
+    if (email) updates.email = email;
+    if (role) updates.role = role;
+    if (discipline !== undefined) updates.discipline = discipline;
+    if (year !== undefined) updates.year = year;
+    if (subscription) {
+      if (subscription.status !== undefined) updates['subscription.status'] = subscription.status;
+      if (subscription.planId !== undefined) updates['subscription.planId'] = subscription.planId || null;
+      if (subscription.planName !== undefined) updates['subscription.planName'] = subscription.planName || '';
+      if (subscription.startDate !== undefined) updates['subscription.startDate'] = subscription.startDate || null;
+      if (subscription.endDate !== undefined) updates['subscription.endDate'] = subscription.endDate || null;
+    }
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
-      { ...(name && { name }), ...(email && { email }), ...(role && { role }), ...(discipline !== undefined && { discipline }), ...(year !== undefined && { year }) },
+      updates,
       { new: true }
     ).select('-password');
     if (!updatedUser) return res.status(404).json({ message: 'User not found' });
     res.status(200).json({ message: 'User updated successfully', user: updatedUser });
-  })
-);
-
-// Change password (authenticated user)
-router.put(
-  '/change-password',
-  verifyToken,
-  [
-    body('currentPassword').notEmpty().withMessage('Current password is required'),
-    body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters'),
-  ],
-  validate,
-  catchAsync(async (req, res) => {
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    const isMatch = await user.comparePassword(req.body.currentPassword);
-    if (!isMatch) return res.status(400).json({ message: 'Current password is incorrect' });
-    user.password = req.body.newPassword;
-    await user.save();
-    res.json({ message: 'Password changed successfully' });
   })
 );
 

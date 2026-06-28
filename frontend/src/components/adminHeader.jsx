@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useClerk } from "@clerk/react";
 import { FaBars, FaMoon, FaSun } from "react-icons/fa";
 import { useTheme } from "../context/ThemeContext.jsx";
 import { useSound } from '../context/SoundContext';
+import ConfirmModal from './ConfirmModal';
 import "../styles/adminHeader.css";
 
 const AdminHeader = ({ toggleSidebar, sidebarOpen }) => {
@@ -11,6 +12,7 @@ const AdminHeader = ({ toggleSidebar, sidebarOpen }) => {
   const { signOut } = useClerk();
   const { darkMode, toggleDarkMode } = useTheme();
   const play = useSound();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const handleLogout = () => {
     signOut();
     try { localStorage.removeItem('adminRole'); } catch { /* ignore */ }
@@ -32,11 +34,19 @@ const AdminHeader = ({ toggleSidebar, sidebarOpen }) => {
           aria-label="Toggle dark mode">
           {darkMode ? <FaSun /> : <FaMoon />}
         </button>
-        <button id="logout" onClick={() => { play('click'); handleLogout(); }}
+        <button id="logout" onClick={() => { play('click'); setShowLogoutConfirm(true); }}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}>
           Logout
         </button>
       </nav>
+      <ConfirmModal
+        open={showLogoutConfirm}
+        title="Logout"
+        message="Are you sure you want to log out?"
+        confirmText="Logout"
+        onConfirm={() => { setShowLogoutConfirm(false); handleLogout(); }}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </header>
   );
 };

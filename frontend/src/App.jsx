@@ -55,6 +55,8 @@ const VoiceExamManagement = lazy(() => import('./pages/VoiceExamManagement'));
 const Reports = lazy(() => import('./pages/Reports'));
 const AdminSetup = lazy(() => import('./pages/AdminSetup'));
 const FeedbackManagement = lazy(() => import('./pages/FeedbackManagement'));
+const PricingPage = lazy(() => import('./pages/PricingPage'));
+const AdminPricingPage = lazy(() => import('./pages/AdminPricingPage'));
 
 const Fallback = () => {
   const { t } = useTranslation();
@@ -119,6 +121,7 @@ const UserLayout = ({ isDarkMode, toggleDarkMode }) => {
               <Route path="/profile"     element={<ProfilePage />} />
               <Route path="/quiz/:id"    element={<ProfileGuardModal><QuizCard /></ProfileGuardModal>} />
               <Route path="/books"       element={<ProfileGuardModal><BooksPage /></ProfileGuardModal>} />
+              <Route path="/pricing"    element={<PricingPage />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
@@ -231,6 +234,7 @@ const AppContent = () => {
             <Route path="/admin/book-management" element={<BookManagement />} />
             <Route path="/admin/voice-exam-management" element={<VoiceExamManagement />} />
             <Route path="/admin/feedback" element={<FeedbackManagement />} />
+            <Route path="/admin/pricing" element={<AdminPricingPage />} />
             <Route path="/admin/profile" element={<AdminProfile />} />
             <Route path="*" element={<NotFound />} />
           </Route>

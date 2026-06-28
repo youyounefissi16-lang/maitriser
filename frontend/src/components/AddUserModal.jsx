@@ -44,8 +44,8 @@ const AddUserModal = ({ setShowModal, fetchUsers }) => {
   if (tempPassword) {
     const genUid = (() => { try { return localStorage.getItem('lastGenUserId'); } catch { return null; } })();
     return (
-      <div className="modal-overlay">
-        <div className="modal-content">
+      <div className="modal-overlay" onClick={() => { try { localStorage.removeItem('lastGenUserId'); } catch {} fetchUsers(); setShowModal(false); }}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
           <h3>User Created</h3>
           {genUid && <p style={{ fontWeight: 700, fontSize: '1.1rem' }}>User ID: {genUid}</p>}
           <p>Share this temporary password with the user. It will not be shown again.</p>
@@ -59,8 +59,8 @@ const AddUserModal = ({ setShowModal, fetchUsers }) => {
   }
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
+    <div className="modal-overlay" onClick={() => !loading && setShowModal(false)}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <h3>Add New User</h3>
         <form onSubmit={handleSubmit}>
           <div className="input-group">

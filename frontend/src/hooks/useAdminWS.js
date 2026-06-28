@@ -3,6 +3,7 @@ import { refreshToken } from '../utils/tokenStore';
 
 const RECONNECT_BASE = 1000;
 const RECONNECT_MAX = 30000;
+const MAX_RETRIES = 10;
 
 export const useAdminWS = () => {
   const [lastEvent, setLastEvent] = useState(null);
@@ -39,6 +40,7 @@ export const useAdminWS = () => {
         if (cancelledRef.current) return;
         setConnected(false);
         wsRef.current = null;
+        if (retriesRef.current >= MAX_RETRIES) return;
         const delay = Math.min(RECONNECT_BASE * 2 ** retriesRef.current, RECONNECT_MAX);
         retriesRef.current += 1;
         timerRef.current = setTimeout(connect, delay);

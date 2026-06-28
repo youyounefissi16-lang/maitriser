@@ -20,6 +20,7 @@ const emptyForm = () => ({
 });
 
 const VoiceExamManagement = () => {
+  useEffect(() => { document.title = 'Voice Exam Management — Admin'; }, []);
   const notify = useToast();
   const play = useSound();
   const [modules, setModules]               = useState([]);
@@ -58,7 +59,8 @@ const VoiceExamManagement = () => {
 
   const fetchModules = async () => {
     try {
-      const res = await authFetch('/api/modules?discipline=medicine');
+      const discipline = localStorage.getItem('userDiscipline') || 'medicine';
+      const res = await authFetch(`/api/modules?discipline=${discipline}`);
       if (!res.ok) { setError('Failed to load modules'); return; }
       const modData = await res.json();
       setModules(Array.isArray(modData) ? modData : []);
@@ -225,6 +227,7 @@ const VoiceExamManagement = () => {
       selectedYear: String(exam.year),
       moduleId: exam.moduleId?._id || exam.moduleId,
       clinicalCasePrompt: exam.clinicalCasePrompt,
+
       questions: (exam.questions || []).length > 0
         ? exam.questions.map((q) => ({
             questionText: q.questionText || '',

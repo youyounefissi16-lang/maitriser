@@ -12,6 +12,7 @@ const statusColors = {
 };
 
 const FeedbackManagement = () => {
+  useEffect(() => { document.title = 'Feedback — Admin'; }, []);
   const addToast = useToast();
   const { t } = useTranslation();
   const [list, setList] = useState([]);
@@ -19,6 +20,7 @@ const FeedbackManagement = () => {
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState(null);
   const [filter, setFilter] = useState('');
+  const [processing, setProcessing] = useState({});
 
   const fetchFeedback = useCallback(async () => {
     setLoading(true);
@@ -40,6 +42,7 @@ const FeedbackManagement = () => {
   useEffect(() => { fetchFeedback(); }, [fetchFeedback]);
 
   const updateStatus = async (id, status) => {
+    setProcessing(prev => ({ ...prev, [id]: true }));
     try {
       const res = await authFetch(`/api/feedback/${id}/status`, {
         method: 'PATCH',
@@ -51,6 +54,8 @@ const FeedbackManagement = () => {
     } catch (err) {
       logger.error({ err }, 'Feedback status update failed');
       addToast('Failed to update status', 'error');
+    } finally {
+      setProcessing(prev => ({ ...prev, [id]: false }));
     }
   };
 
@@ -123,10 +128,10 @@ const FeedbackManagement = () => {
                   <td>
                     <div style={{ display: 'flex', gap: 4 }}>
                       {fb.status !== 'read' && (
-                        <button onClick={() => updateStatus(fb._id, 'read')} style={btnSmall}>{t('admin.feedback.markRead')}</button>
+                        <button onClick={() => updateStatus(fb._id, 'read')} disabled={processing[fb._id]} style={{ ...btnSmall, opacity: processing[fb._id] ? 0.5 : 1, cursor: processing[fb._id] ? 'not-allowed' : 'pointer' }}>{t('admin.feedback.markRead')}</button>
                       )}
                       {fb.status !== 'resolved' && (
-                        <button onClick={() => updateStatus(fb._id, 'resolved')} style={btnSmall}>{t('admin.feedback.resolve')}</button>
+                        <button onClick={() => updateStatus(fb._id, 'resolved')} disabled={processing[fb._id]} style={{ ...btnSmall, opacity: processing[fb._id] ? 0.5 : 1, cursor: processing[fb._id] ? 'not-allowed' : 'pointer' }}>{t('admin.feedback.resolve')}</button>
                       )}
                     </div>
                   </td>

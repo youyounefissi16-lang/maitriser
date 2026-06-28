@@ -14,6 +14,7 @@ import { escapeRegex } from '../utils/escapeRegex.js';
 import { getPagination, paginatedResponse } from '../utils/paginate.js';
 import { validate } from '../middleware/validate.js';
 import { genBookId } from '../utils/idGenerator.js';
+import { checkSubscription } from '../middleware/requireSubscription.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -70,6 +71,14 @@ router.post('/books/upload', requireAdmin, upload.single('file'), catchAsync(asy
 
 // List books — filter by moduleId, year, or keyword search (cached 5 min)
 router.get('/books', cacheMiddleware(), catchAsync(async (req, res) => {
+  if (!await checkSubscription(req.user?.id)) {
+    const { skip, limit, page } = getPagination(req.query);
+    const [books, total] = await Promise.all([
+      Book.find({ _id: null }).skip(skip).limit(limit),
+      Promise.resolve(0),
+    ]);
+    return res.json(paginatedResponse(books, total, page, limit));
+  }
   const filter = {};
   if (req.query.moduleId) filter.moduleIds = String(req.query.moduleId);
   if (req.query.search)   filter.title = { $regex: escapeRegex(String(req.query.search)), $options: 'i' };
@@ -95,6 +104,7 @@ const serveSafe = (filename) => {
 router.get('/books/download/:id', [
   param('id').isMongoId(),
 ], validate, catchAsync(async (req, res) => {
+  if (!await checkSubscription(req.user?.id)) return res.status(403).json({ message: 'Subscription required' });
   const book = await Book.findById(req.params.id);
   if (!book) return res.status(404).json({ message: 'Book not found' });
   const filePath = serveSafe(book.filename);
@@ -114,6 +124,7 @@ router.get('/books/download/:id', [
 router.get('/books/file/:id', [
   param('id').isMongoId(),
 ], validate, catchAsync(async (req, res) => {
+  if (!await checkSubscription(req.user?.id)) return res.status(403).json({ message: 'Subscription required' });
   const book = await Book.findById(req.params.id);
   if (!book) return res.status(404).json({ message: 'Book not found' });
   const filePath = serveSafe(book.filename);

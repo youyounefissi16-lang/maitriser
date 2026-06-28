@@ -17,6 +17,7 @@ const voiceExamSchema = new mongoose.Schema({
   moduleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Module', required: true },
   year:     { type: Number, required: true, min: 1, max: 7 },
   discipline: { type: String, enum: ['medicine'], default: 'medicine', required: true },
+  premium: { type: Boolean, default: false },
   clinicalCasePrompt: { type: String, required: true },
   questions: [questionSchema],
   images:    [{ type: String }],

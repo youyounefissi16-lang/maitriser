@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL, fetchWithAuth } from '../config/api';
 import { refreshToken } from '../utils/tokenStore';
 import { SkeletonCard, SkeletonFilters } from '../components/LoadingSkeleton';
@@ -8,6 +9,8 @@ import '../styles/teal-theme.css';
 
 const BooksPage = () => {
   const notify = useToast();
+  const navigate = useNavigate();
+  const [subscription, setSubscription]         = useState(null);
   const [modules, setModules]                   = useState([]);
   const [filteredModules, setFilteredModules]   = useState([]);
   const [selectedModuleId, setSelectedModuleId] = useState('');
@@ -27,6 +30,14 @@ const BooksPage = () => {
   const [booksError, setBooksError]             = useState(null);
 
   useEffect(() => { fetchModules(); }, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetchWithAuth(`${API_BASE_URL}/api/payments/subscription`);
+        if (res.ok) { const d = await res.json(); setSubscription(d.subscription); }
+      } catch { /* ignore */ }
+    })();
+  }, []);
   useEffect(() => {
     const userYear = localStorage.getItem('userYear') || '';
     setFilteredModules(userYear ? modules.filter((m) => m.year === Number(userYear)) : modules);
@@ -126,13 +137,22 @@ const BooksPage = () => {
           </div>
         )}
 
-        {booksError ? (
+        {subscription && subscription.status !== 'active' ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px', background: '#fff3cd', borderRadius: 12, marginBottom: 16 }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>&#128274;</div>
+            <h3 style={{ color: '#856404', margin: '0 0 8px' }}>Subscription Required</h3>
+            <p style={{ color: '#856404', fontSize: '0.9rem', margin: '0 0 16px' }}>
+              A subscription is required to access books. Subscribe to unlock all content for your discipline and year.
+            </p>
+            <button className="btn-primary" onClick={() => navigate('/pricing')}>View Plans</button>
+          </div>
+        ) : booksError ? (
           <div className="empty-state" style={{ color: 'var(--color-danger)' }}>
             <p>Erreur lors du chargement des livres : {booksError}</p>
             <button type="button" className="btn-primary" onClick={fetchBooks} style={{ marginTop: '12px' }}>Réessayer</button>
           </div>
         ) : loadingBooks ? (
-          <div className="grid-cards"><SkeletonCard count={6} /></div>
+          <SkeletonCard count={6} />
         ) : books.length === 0 ? (
           <div className="empty-state">Aucun livre disponible pour cette sélection.</div>
         ) : (

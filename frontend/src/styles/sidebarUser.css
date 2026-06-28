@@ -129,7 +129,7 @@
 @media (max-width: 768px) {
   .sidebar-user.closed {
     transform: translateX(-100%);
-    width: 230px;
+    width: 60px;
   }
   .sidebar-user.open {
     width: 200px;

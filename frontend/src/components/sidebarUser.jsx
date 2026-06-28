@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { FaHome, FaClipboardList, FaMicrophone, FaBook, FaSync, FaUser, FaBars, FaSun, FaMoon, FaGlobe, FaSignOutAlt, FaShieldAlt } from "react-icons/fa";
+import { FaHome, FaClipboardList, FaMicrophone, FaBook, FaSync, FaUser, FaBars, FaSun, FaMoon, FaGlobe, FaSignOutAlt, FaShieldAlt, FaStar } from "react-icons/fa";
 import { useClerk } from "@clerk/react";
 import { useSound } from '../context/SoundContext';
 import { useTranslation } from '../context/LanguageContext';
@@ -11,6 +11,10 @@ const SidebarUser = ({ sidebarOpen, toggleSidebar, isDarkMode, toggleDarkMode })
   const { t, changeLanguage } = useTranslation();
   const clerk = useClerk();
   const navigate = useNavigate();
+
+  const userDiscipline = (() => { try { return localStorage.getItem('userDiscipline'); } catch { return null; } })();
+  const userYear = (() => { try { return localStorage.getItem('userYear'); } catch { return null; } })();
+  const userRole = (() => { try { return localStorage.getItem('userRole'); } catch { return null; } })();
 
   const handleLogout = () => {
     clerk.signOut();
@@ -38,7 +42,7 @@ const SidebarUser = ({ sidebarOpen, toggleSidebar, isDarkMode, toggleDarkMode })
         <NavLink to="/quizPage" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
           <FaClipboardList className="sidebar-icon" /><span className="sidebar-text">QCM</span>
         </NavLink>
-        {localStorage.getItem('userDiscipline') === 'medicine' && ['4','5','6'].includes(localStorage.getItem('userYear')) && (
+        {userDiscipline === 'medicine' && ['4','5','6'].includes(userYear) && (
           <NavLink to="/voice-exams" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
             <FaMicrophone className="sidebar-icon" /><span className="sidebar-text">Examens Oraux</span>
           </NavLink>
@@ -49,11 +53,14 @@ const SidebarUser = ({ sidebarOpen, toggleSidebar, isDarkMode, toggleDarkMode })
         <NavLink to="/review" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
           <FaSync className="sidebar-icon" /><span className="sidebar-text">Révision</span>
         </NavLink>
+        <NavLink to="/pricing" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
+          <FaStar className="sidebar-icon" /><span className="sidebar-text">Premium</span>
+        </NavLink>
         <NavLink to="/profile" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
           <FaUser className="sidebar-icon" /><span className="sidebar-text">Profil</span>
         </NavLink>
 
-        {localStorage.getItem('userRole') === 'admin' && (
+        {userRole === 'admin' && (
           <NavLink to="/admin/dashboard" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
             <FaShieldAlt className="sidebar-icon" /><span className="sidebar-text">Panneau Admin</span>
           </NavLink>

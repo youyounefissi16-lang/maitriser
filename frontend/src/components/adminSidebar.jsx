@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { FaHome, FaClipboardList, FaUsers, FaLayerGroup, FaChartLine, FaBook, FaMicrophone, FaComment } from "react-icons/fa";
+import { FaHome, FaClipboardList, FaUsers, FaLayerGroup, FaChartLine, FaBook, FaMicrophone, FaComment, FaDollarSign } from "react-icons/fa";
 import { useSound } from '../context/SoundContext';
 import "../styles/sidebar.css";
 
@@ -33,6 +33,9 @@ const Sidebar = ({ sidebarOpen }) => {
         </NavLink>
         <NavLink to="/admin/feedback" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
           <FaComment className="sidebar-icon" /><span className="sidebar-text">Feedback</span>
+        </NavLink>
+        <NavLink to="/admin/pricing" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => play('navigate')}>
+          <FaDollarSign className="sidebar-icon" /><span className="sidebar-text">Pricing</span>
         </NavLink>
       </nav>
     </aside>

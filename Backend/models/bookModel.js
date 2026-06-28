@@ -6,6 +6,7 @@ const bookSchema = new mongoose.Schema({
   moduleIds:    [{ type: mongoose.Schema.Types.ObjectId, ref: 'Module' }], // multiple modules
   filename:     { type: String, required: true },
   originalName: { type: String, required: true },
+  premium: { type: Boolean, default: false },
 }, { timestamps: true });
 
 bookSchema.index({ moduleIds: 1, createdAt: -1 });

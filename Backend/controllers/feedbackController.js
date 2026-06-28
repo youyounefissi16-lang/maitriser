@@ -1,6 +1,7 @@
 import Feedback from '../models/feedbackModel.js';
 import logger from '../utils/logger.js';
 import { catchAsync } from '../utils/asyncHandler.js';
+import { paginatedResponse } from '../utils/paginate.js';
 import { broadcast } from '../ws.js';
 
 const stripHtml = (s) => s.replace(/<[^>]*>/g, '');
@@ -39,7 +40,7 @@ export const getAllFeedback = catchAsync(async (req, res) => {
 
   res.status(200).json(
     skip !== undefined
-      ? { data: feedbackList, page, limit, total, totalPages: Math.ceil(total / limit) }
+      ? paginatedResponse(feedbackList, total, page, limit)
       : feedbackList
   );
 });

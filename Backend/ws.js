@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { verifyToken } from '@clerk/backend';
 import { WebSocketServer } from 'ws';
 import logger from './utils/logger.js';
 
@@ -20,14 +20,14 @@ export function initWS(server) {
     const url = new URL(req.url, 'http://x');
     const token = url.searchParams.get('token');
     if (!token) { ws.close(4001, 'Token required'); return; }
-    try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET);
-      if (payload.role !== 'admin') { ws.close(4001, 'Admin only'); return; }
-    } catch { ws.close(4001, 'Invalid token'); return; }
-
-    ws._alive = true;
-    ws.on('pong', () => { ws._alive = true; });
-    ws.on('error', (err) => logger.error({ err }, 'WebSocket error'));
+    verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY })
+      .then((payload) => {
+        if (payload.role !== 'admin') { ws.close(4001, 'Admin only'); return; }
+        ws._alive = true;
+        ws.on('pong', () => { ws._alive = true; });
+        ws.on('error', (err) => logger.error({ err }, 'WebSocket error'));
+      })
+      .catch(() => { ws.close(4001, 'Invalid token'); });
   });
 
   logger.info('WebSocket server initialized at /ws/admin');

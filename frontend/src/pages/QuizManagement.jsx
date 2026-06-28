@@ -40,6 +40,7 @@ const OptionItem = ({ i, opt, onUpdate }) => {
 };
 
 const QuizManagement = () => {
+  useEffect(() => { document.title = 'Quiz Management — Admin'; }, []);
   const notify = useToast();
   const play = useSound();
   const { t } = useTranslation();
@@ -207,7 +208,7 @@ const QuizManagement = () => {
   const startEdit = (quiz) => {
     const opts = quiz.question?.options || ['', '', '', ''];
     const correctIndices = (quiz.question?.correctAnswers || [])
-      .map((ans) => opts.indexOf(ans))
+      .map((ans) => opts.findIndex((o) => o === ans))
       .filter((i) => i >= 0);
     const mod = modules.find((m) => (m._id === (quiz.moduleId?._id || quiz.moduleId)));
     if (mod) setModuleCourses(mod.courses || []);
@@ -498,8 +499,6 @@ const QuizManagement = () => {
           <label className="qm-label">{t('admin.quiz.explanation')}</label>
           <textarea className="qm-textarea" value={form.explanation} onChange={(e) => setField('explanation', e.target.value)} placeholder="Write explanation here..." rows={3} />
         </div>
-
-
 
         <div className="qm-actions">
           <button type="button" className="btn-draft" onClick={() => handleSubmit(false)} disabled={submitting}><FaSave /> {t('admin.quiz.saveDraft')}</button>

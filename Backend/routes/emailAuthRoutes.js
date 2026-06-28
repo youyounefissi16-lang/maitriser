@@ -1,10 +1,17 @@
 import express from 'express';
 import { body } from 'express-validator';
 import crypto from 'crypto';
+import rateLimit from 'express-rate-limit';
 import User from '../models/userModel.js';
 import { sendEmail, verificationEmailHtml, resetPasswordHtml } from '../utils/email.js';
 import logger from '../utils/logger.js';
 import { validate } from '../middleware/validate.js';
+
+const emailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 5,
+  message: { message: 'Too many requests, please try again later.' },
+  standardHeaders: true, legacyHeaders: false,
+});
 
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174')
   .split(',').map((o) => o.trim());
@@ -24,6 +31,7 @@ const router = express.Router();
 // POST /api/auth/send-verification — send verification email to existing unverified user
 router.post(
   '/send-verification',
+  emailLimiter,
   [body('email').isEmail().normalizeEmail()],
   validate,
   async (req, res) => {
@@ -52,6 +60,7 @@ router.post(
 // POST /api/auth/verify-email — verify email with token
 router.post(
   '/verify-email',
+  emailLimiter,
   [body('token').notEmpty()],
   validate,
   async (req, res) => {
@@ -79,6 +88,7 @@ router.post(
 // POST /api/auth/forgot-password — send reset email
 router.post(
   '/forgot-password',
+  emailLimiter,
   [body('email').isEmail().normalizeEmail()],
   validate,
   async (req, res) => {
@@ -108,6 +118,7 @@ router.post(
 // POST /api/auth/reset-password — reset password with token
 router.post(
   '/reset-password',
+  emailLimiter,
   [
     body('token').notEmpty(),
     body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),

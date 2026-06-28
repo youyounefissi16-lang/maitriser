@@ -20,6 +20,8 @@ import emailAuthRoutes from './routes/emailAuthRoutes.js';
 import clerkRoutes from './routes/clerkRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import feedbackRoutes from './routes/feedbackRoutes.js';
+import planRoutes from './routes/planRoutes.js';
+import dailyQuizRoutes from './routes/dailyQuizRoutes.js';
 import { verifyToken, requireAdmin } from './controllers/authController.js';
 
 const app = express();
@@ -28,7 +30,20 @@ const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http:/
   .split(',').map((o) => o.trim());
 
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      connectSrc: ["'self'", 'ws:', 'wss:'],
+      frameAncestors: ["'none'"],
+      baseUri: ["'none'"],
+      formAction: ["'self'"],
+    },
+  },
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   hsts: process.env.NODE_ENV === 'production' ? { maxAge: 63072000, includeSubDomains: true, preload: true } : false,
@@ -49,11 +64,6 @@ app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    try {
-      const u = new URL(origin);
-      if (u.hostname.endsWith('.ngrok-free.dev') || u.hostname.endsWith('.ngrok.io'))
-        return callback(null, true);
-    } catch {}
     callback(null, false);
   },
   credentials: true,
@@ -105,6 +115,8 @@ app.use('/api/user', sinupRoute);
 app.use('/api/auth', authRoutes);
 app.use('/api/contact', contactLimiter, contactRoutes);
 app.use('/api', userAuthRoutes);
+app.use('/api', planRoutes);
+app.use('/api', dailyQuizRoutes);
 app.use('/api/auth', emailAuthRoutes);
 app.use('/api/auth', clerkRoutes);
 app.use('/api', adminRoutes);

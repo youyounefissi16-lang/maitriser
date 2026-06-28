@@ -13,6 +13,7 @@ import { catchAsync } from '../utils/asyncHandler.js';
 import { escapeRegex } from '../utils/escapeRegex.js';
 import { validate } from '../middleware/validate.js';
 import { genQuizId } from '../utils/idGenerator.js';
+import { checkSubscription } from '../middleware/requireSubscription.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -42,7 +43,7 @@ const quizImageStorage = multer.diskStorage({
 const quizImageUpload = multer({
   storage: quizImageStorage,
   fileFilter: (_req, file, cb) => {
-    const allowed = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+    const allowed = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowed.includes(ext)) cb(null, true);
     else cb(new Error('Only image files are allowed (png, jpg, jpeg, gif, webp, svg)'));
@@ -64,6 +65,7 @@ const stripAnswers = (quiz) => {
 // GET /api/quizzes — list (student-safe: no correctAnswers, only published)
 router.get('/quizzes', catchAsync(async (req, res) => {
   if (!req.query.discipline || !req.query.year) return res.json(paginatedResponse([], 0, 1, 1));
+  if (!await checkSubscription(req.user?.id)) return res.json(paginatedResponse([], 0, 1, 1));
   const filter = { published: true, discipline: req.query.discipline };
   const isResidanat = Number(req.query.year) === 7 && req.query.discipline === 'medicine';
   if (!isResidanat) filter.year = Number(req.query.year);
@@ -85,6 +87,7 @@ router.get('/quizzes', catchAsync(async (req, res) => {
 router.get('/quizzes/:id', [
   param('id').isMongoId(),
 ], validate, catchAsync(async (req, res) => {
+  if (!await checkSubscription(req.user?.id)) return res.status(403).json({ message: 'Subscription required' });
   const quiz = await Quiz.findById(req.params.id).populate('moduleId').populate('caseId');
   if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
   if (!quiz.published) return res.status(404).json({ message: 'Quiz not found' });

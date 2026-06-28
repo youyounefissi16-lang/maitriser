@@ -19,6 +19,7 @@ const StatCard = ({ label, value, color }) => (
 );
 
 const Dashboard = () => {
+  useEffect(() => { document.title = 'Dashboard — Admin'; }, []);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

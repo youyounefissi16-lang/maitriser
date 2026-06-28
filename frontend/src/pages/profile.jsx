@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from "@clerk/react";
 import { authFetch } from '../config/authFetch';
 import { logger } from '../utils/logger';
 
 const AdminProfile = () => {
+  useEffect(() => { document.title = 'Profile — Admin'; }, []);
   const navigate = useNavigate();
   const { user } = useUser();
   const [currentPassword, setCurrentPassword] = useState('');

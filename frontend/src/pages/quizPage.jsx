@@ -28,6 +28,7 @@ const QuizPage = () => {
   const [page, setPage]                           = useState(1);
   const [totalPages, setTotalPages]               = useState(1);
   const [starting, setStarting]                   = useState(false);
+  const [subscription, setSubscription]           = useState(null);
   const navigate = useNavigate();
   const notify = useToast();
   const { t } = useTranslation();
@@ -39,6 +40,14 @@ const QuizPage = () => {
     const controller = new AbortController();
     fetchModules(controller.signal);
     return () => controller.abort();
+  }, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetchWithAuth(`${API_BASE_URL}/api/payments/subscription`);
+        if (res.ok) { const d = await res.json(); setSubscription(d.subscription); }
+      } catch { /* ignore */ }
+    })();
   }, []);
   useEffect(() => {
     const userYear = localStorage.getItem('userYear') || '';
@@ -209,73 +218,88 @@ const QuizPage = () => {
           </div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
-            <input type="checkbox" checked={studyMode} onChange={(e) => setStudyMode(e.target.checked)} />
-            🔍 {t('quiz.studyMode')}
-          </label>
-        </div>
-
-        {quizzesError ? (
-          <div className="empty-state" style={{ color: '#e74c3c' }}>
-            <p>{t('quiz.loadError')} : {quizzesError}</p>
-            <button type="button" className="btn-primary" onClick={fetchQuizzes} style={{ marginTop: '12px' }}>{t('quiz.retry')}</button>
+        {subscription && subscription.status !== 'active' && (
+          <div style={{ textAlign: 'center', padding: '40px 20px', background: '#fff3cd', borderRadius: 12, marginBottom: 16 }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>&#128274;</div>
+            <h3 style={{ color: '#856404', margin: '0 0 8px' }}>Subscription Required</h3>
+            <p style={{ color: '#856404', fontSize: '0.9rem', margin: '0 0 16px' }}>
+              A subscription is required to access quizzes. Subscribe to unlock all content for your discipline and year.
+            </p>
+            <button className="btn-primary" onClick={() => navigate('/pricing')}>View Plans</button>
           </div>
-        ) : loadingQuizzes ? (
-          <SkeletonQuizItem count={5} />
-        ) : (
-          <>
-            {filteredQuizzes.length > 0 && (
-              <div className="exam-mode-section">
-                <div className="exam-mode-header">🎯 {t('quiz.mockExam')}</div>
-                <div className="exam-mode-controls">
-                  <span>{t('quiz.questions')}</span>
-                  <input type="number" className="exam-count-input" min="1" max={filteredQuizzes.length} value={examCount} onChange={(e) => setExamCount(Number(e.target.value))} />
-                  <span style={{ fontSize: '13px', color: '#888' }}>({t('quiz.max')} {filteredQuizzes.length})</span>
-                  <span>{t('quiz.time')}</span>
-                  <input type="number" className="exam-count-input" min="1" max="180" value={examTimer} onChange={(e) => setExamTimer(Number(e.target.value))} />
-                  <select value={selectionCriteria} onChange={(e) => setSelectionCriteria(e.target.value)}
-                    style={{ padding: '8px', borderRadius: '8px', border: '1px solid var(--border-light, #ddd)', fontSize: '13px', background: 'var(--card-bg, #fff)' }}>
-                    <option value="random">{t('quiz.criteria.random')}</option>
-                    <option value="per-module">{t('quiz.criteria.perModule')}</option>
-                    <option value="per-year">{t('quiz.criteria.perYear')}</option>
-                  </select>
-                  <button type="button" className="btn-primary exam-start-btn" onClick={handleStartMockExam} disabled={starting}>{starting ? t('quiz.starting', 'Démarrage...') : t('quiz.startMock')}</button>
-                </div>
-              </div>
-            )}
+        )}
 
-            {filteredQuizzes.length === 0 ? (
-              <div className="empty-state">
-                <p>{t('quiz.noQuizzes')}</p>
-                <p style={{ color: '#888', fontSize: '13px', marginTop: '4px' }}>{t('quiz.noQuizzesHint')}</p>
-              </div>
-            ) : (
-              filteredQuizzes.map((quiz) => (
-                <div key={quiz._id} className="quiz-card-item">
-                  <div className="qid">{quiz.quizId}</div>
-                  {quiz.caseId && <span style={{ display: 'inline-block', background: '#e3f2fd', color: '#04484F', padding: '2px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px' }}>📋 {t('quiz.case')}</span>}
-                  <h3>{quiz.question?.questionText?.substring(0, 80) || quiz.quizId}</h3>
-                  {quiz.question?.questionImage && (
-                    <img src={`${API_BASE_URL}/api/quiz-images/${quiz.question.questionImage}`} alt="Question" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6, marginTop: 8, marginBottom: 8 }} />
-                  )}
-                  <div className="qmeta">
-                    Année {quiz.year} — {quiz.moduleId?.name || ''}{quiz.course ? ` — ${quiz.course}` : ''}
+        {subscription && subscription.status === 'active' && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+              <input type="checkbox" checked={studyMode} onChange={(e) => setStudyMode(e.target.checked)} />
+              🔍 {t('quiz.studyMode')}
+            </label>
+          </div>
+
+          {quizzesError ? (
+            <div className="empty-state" style={{ color: '#e74c3c' }}>
+              <p>{t('quiz.loadError')} : {quizzesError}</p>
+              <button type="button" className="btn-primary" onClick={fetchQuizzes} style={{ marginTop: '12px' }}>{t('quiz.retry')}</button>
+            </div>
+          ) : loadingQuizzes ? (
+            <SkeletonQuizItem count={5} />
+          ) : (
+            <>
+              {filteredQuizzes.length > 0 && (
+                <div className="exam-mode-section">
+                  <div className="exam-mode-header">🎯 {t('quiz.mockExam')}</div>
+                  <div className="exam-mode-controls">
+                    <span>{t('quiz.questions')}</span>
+                    <input type="number" className="exam-count-input" min="1" max={filteredQuizzes.length} value={examCount} onChange={(e) => setExamCount(Number(e.target.value))} />
+                    <span style={{ fontSize: '13px', color: '#888' }}>({t('quiz.max')} {filteredQuizzes.length})</span>
+                    <span>{t('quiz.time')}</span>
+                    <input type="number" className="exam-count-input" min="1" max="180" value={examTimer} onChange={(e) => setExamTimer(Number(e.target.value))} />
+                    <select value={selectionCriteria} onChange={(e) => setSelectionCriteria(e.target.value)}
+                      style={{ padding: '8px', borderRadius: '8px', border: '1px solid var(--border-light, #ddd)', fontSize: '13px', background: 'var(--card-bg, #fff)' }}>
+                      <option value="random">{t('quiz.criteria.random')}</option>
+                      <option value="per-module">{t('quiz.criteria.perModule')}</option>
+                      <option value="per-year">{t('quiz.criteria.perYear')}</option>
+                    </select>
+                    <button type="button" className="btn-primary exam-start-btn" onClick={handleStartMockExam} disabled={starting}>{starting ? t('quiz.starting', 'Démarrage...') : t('quiz.startMock')}</button>
                   </div>
-                  {quiz.caseId ? (
-                    <button type="button" className="btn-primary" onClick={() => navigate(`/case-exam/${quiz.caseId._id || quiz.caseId}`)}>
-                      📋 {t('quiz.launchCase')}
-                    </button>
-                  ) : (
-                    <button type="button" className="btn-primary" onClick={() => handleStart(quiz)}>
-                      {studyMode ? t('quiz.study') : t('quiz.start')}
-                    </button>
-                  )}
                 </div>
-              ))
-            )}
-            {!loadingQuizzes && !quizzesError && <Pagination page={page} pages={totalPages} onPageChange={(p) => fetchQuizzes(p)} />}
-          </>
+              )}
+
+              {filteredQuizzes.length === 0 ? (
+                <div className="empty-state">
+                  <p>{t('quiz.noQuizzes')}</p>
+                  <p style={{ color: '#888', fontSize: '13px', marginTop: '4px' }}>{t('quiz.noQuizzesHint')}</p>
+                </div>
+              ) : (
+                filteredQuizzes.map((quiz) => (
+                  <div key={quiz._id} className="quiz-card-item">
+                    <div className="qid">{quiz.quizId}</div>
+                    {quiz.caseId && <span style={{ display: 'inline-block', background: '#e3f2fd', color: '#04484F', padding: '2px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px' }}>📋 {t('quiz.case')}</span>}
+                    <h3>{quiz.question?.questionText?.substring(0, 80) || quiz.quizId}</h3>
+                    {quiz.question?.questionImage && (
+                      <img src={`${API_BASE_URL}/api/quiz-images/${quiz.question.questionImage}`} alt="Question" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6, marginTop: 8, marginBottom: 8 }} />
+                    )}
+                    <div className="qmeta">
+                      Année {quiz.year} — {quiz.moduleId?.name || ''}{quiz.course ? ` — ${quiz.course}` : ''}
+                    </div>
+                    {quiz.caseId ? (
+                      <button type="button" className="btn-primary" onClick={() => navigate(`/case-exam/${quiz.caseId._id || quiz.caseId}`)}>
+                        📋 {t('quiz.launchCase')}
+                      </button>
+                    ) : (
+                      <button type="button" className="btn-primary" onClick={() => handleStart(quiz)}>
+                        {studyMode ? t('quiz.study') : t('quiz.start')}
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+              {!loadingQuizzes && !quizzesError && <Pagination page={page} pages={totalPages} onPageChange={(p) => fetchQuizzes(p)} />}
+            </>
+          )}
+        </>
         )}
       </div>
     </div>

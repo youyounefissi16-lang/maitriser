@@ -1,6 +1,6 @@
 .sidebar {
   width: 230px;
-  height: 100vh;
+  height: calc(100vh - 80px);
   background: linear-gradient(180deg, var(--dc-darkest) 0%, var(--dc-dark) 40%, var(--dc-deeper) 100%);
   color: var(--dc-white);
   display: flex;
@@ -9,7 +9,7 @@
   transition: width 0.3s ease, transform 0.3s ease;
   margin-top: 80px;
   border-right: 1px solid var(--dc-sidebar-border);
-  overflow-x: hidden;
+  overflow: hidden;
   z-index: 500;
 }
 
@@ -24,6 +24,9 @@
 
 .sidebar nav {
   margin-top: 20px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sidebar nav a {
